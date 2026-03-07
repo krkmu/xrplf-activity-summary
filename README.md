@@ -59,6 +59,9 @@ npm run dev -- --no-cache
 # Combine flags
 npm run dev -- --no-cache --weeks-ago=1
 
+# Generate prompt only (no Claude API call)
+npm run dev -- --prompt-only
+
 # Use Opus for a single run
 CLAUDE_MODEL=claude-opus-4-6 npm run dev
 ```
@@ -111,13 +114,14 @@ Edit the `REPOS` array in `src/collector.ts`:
 
 ```typescript
 const REPOS = [
-  { owner: "XRPLF", name: "rippled", hasDiscussions: true },
-  { owner: "XRPLF", name: "xrpl.js", hasDiscussions: false },
-  // Add or remove repos here
+  "rippled",
+  "xrpl.js",
+  "xrpl-py",
+  // Add or remove repo names here (all under the XRPLF org)
 ];
 ```
 
-Set `hasDiscussions: true` only if the repo has GitHub Discussions enabled.
+Discussions are fetched for all repos automatically. If a repo doesn't have Discussions enabled, the query silently skips it.
 
 ### Collection limits
 

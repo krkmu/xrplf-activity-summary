@@ -12,7 +12,7 @@ import {
   saveCachedAmendments,
   fetchBlogPosts,
 } from "./collector.js";
-import { summarize } from "./summarizer.js";
+import { summarize, buildPrompt } from "./summarizer.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
@@ -39,15 +39,11 @@ async function main() {
     console.error("Missing GITHUB_TOKEN in .env");
     process.exit(1);
   }
-  if (!anthropicKey) {
-    console.error("Missing ANTHROPIC_API_KEY in .env");
-    process.exit(1);
-  }
-
   // Parse flags
   const weeksAgoArg = process.argv.find((a) => a.startsWith("--weeks-ago="));
   const weeksAgo = weeksAgoArg ? parseInt(weeksAgoArg.split("=")[1], 10) : 0;
   const noCache = process.argv.includes("--no-cache");
+  const promptOnly = process.argv.includes("--prompt-only");
 
   const cacheDir = join(PROJECT_ROOT, ".cache");
   const outputDir = join(PROJECT_ROOT, "output");
@@ -102,13 +98,27 @@ async function main() {
     return;
   }
 
-  // Summarize with Claude
-  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts);
-
   const base = `${data.weekStart}_${data.weekEnd}`;
-  const outputPath = join(outputDir, `${base}.md`);
   const inputPath = join(outputDir, `${base}_input.md`);
 
+  if (promptOnly) {
+    // Build prompt without calling Claude API
+    const { userMessage, systemPrompt } = buildPrompt(data, xlsSpecs, amendments, blogPosts);
+    writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
+    console.log(`\nPrompt saved to ${inputPath}`);
+    console.log("Use this file with Claude Code or paste into a conversation.");
+    return;
+  }
+
+  if (!anthropicKey) {
+    console.error("Missing ANTHROPIC_API_KEY in .env (use --prompt-only to skip API call)");
+    process.exit(1);
+  }
+
+  // Summarize with Claude API
+  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts);
+
+  const outputPath = join(outputDir, `${base}.md`);
   writeFileSync(outputPath, result.summary, "utf-8");
   writeFileSync(inputPath, `# System Prompt\n\n${result.systemPrompt}\n\n---\n\n# User Message\n\n${result.input}`, "utf-8");
   console.log(`\nSummary written to ${outputPath}`);

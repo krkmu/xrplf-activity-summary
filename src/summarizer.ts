@@ -26,14 +26,17 @@ function buildRepoSection(repo: RepoActivity): string {
     for (const pr of repo.mergedPRs) {
       const diff = `+${pr.diffStats.additions}/-${pr.diffStats.deletions} in ${pr.diffStats.changedFiles} files`;
       const linkedStr = pr.linkedIssues.length > 0
-        ? ` Closes: ${pr.linkedIssues.map((i) => `#${i.number} (${i.title})`).join(", ")}`
+        ? ` Closes: ${pr.linkedIssues.map((i) => `#${i.number} (${i.title}, ${i.url})`).join(", ")}`
+        : "";
+      const reviewSummary = pr.reviewContent.length > 0
+        ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) [${diff}]${linkedStr} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
       for (const review of pr.reviewContent) {
-        parts.push(`  > Review (${review.state}) by @${review.author}: ${review.body}`);
+        if (review.body) parts.push(`  > Review (${review.state}) by @${review.author}: ${review.body}`);
       }
       for (const comment of pr.commentContent) {
         parts.push(`  > Comment by @${comment.author}: ${comment.body}`);
@@ -47,14 +50,17 @@ function buildRepoSection(repo: RepoActivity): string {
       const diff = `+${pr.diffStats.additions}/-${pr.diffStats.deletions} in ${pr.diffStats.changedFiles} files`;
       const reviewInfo = pr.reviews > 0 ? ` (${pr.reviews} reviews, ${pr.reviewComments} comments)` : "";
       const linkedStr = pr.linkedIssues.length > 0
-        ? ` Closes: ${pr.linkedIssues.map((i) => `#${i.number} (${i.title})`).join(", ")}`
+        ? ` Closes: ${pr.linkedIssues.map((i) => `#${i.number} (${i.title}, ${i.url})`).join(", ")}`
+        : "";
+      const reviewSummary = pr.reviewContent.length > 0
+        ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) [${diff}]${reviewInfo}${linkedStr} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${reviewInfo}${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
       for (const review of pr.reviewContent) {
-        parts.push(`  > Review (${review.state}) by @${review.author}: ${review.body}`);
+        if (review.body) parts.push(`  > Review (${review.state}) by @${review.author}: ${review.body}`);
       }
       for (const comment of pr.commentContent) {
         parts.push(`  > Comment by @${comment.author}: ${comment.body}`);
@@ -65,8 +71,9 @@ function buildRepoSection(repo: RepoActivity): string {
   if (repo.activeBranches.length > 0) {
     parts.push("\n### Active Branches (no PR yet)");
     for (const b of repo.activeBranches) {
+      const branchUrl = `https://github.com/XRPLF/${repo.repo}/tree/${encodeURIComponent(b.name)}`;
       parts.push(
-        `- **${b.name}** by @${b.author} — "${b.lastCommitMessage}" (${b.lastCommitDate.slice(0, 10)}, ${b.aheadBy} commits ahead)`
+        `- **${b.name}** by @${b.author} — "${b.lastCommitMessage}" (${b.lastCommitDate.slice(0, 10)}, ${b.aheadBy} commits ahead) ${branchUrl}`
       );
     }
   }
@@ -75,7 +82,7 @@ function buildRepoSection(repo: RepoActivity): string {
     parts.push("\n### Closed Issues");
     for (const issue of repo.closedIssues) {
       parts.push(
-        `- #${issue.number}: ${issue.title} (by @${issue.author}, ${issue.authorAssociation}, ${issue.comments} comments)`
+        `- #${issue.number}: ${issue.title} (by @${issue.author}, ${issue.authorAssociation}, ${issue.comments} comments) ${issue.url}`
       );
       for (const comment of issue.commentContent) {
         parts.push(`  > @${comment.author}: ${comment.body}`);
@@ -87,7 +94,7 @@ function buildRepoSection(repo: RepoActivity): string {
     parts.push("\n### New Issues");
     for (const issue of repo.openedIssues) {
       parts.push(
-        `- #${issue.number}: ${issue.title} (by @${issue.author}, ${issue.authorAssociation}) ${issue.labels.length ? `[${issue.labels.join(", ")}]` : ""}`
+        `- #${issue.number}: ${issue.title} (by @${issue.author}, ${issue.authorAssociation}) ${issue.url} ${issue.labels.length ? `[${issue.labels.join(", ")}]` : ""}`
       );
       if (issue.body) parts.push(`  ${issue.body}`);
       for (const comment of issue.commentContent) {
@@ -100,7 +107,7 @@ function buildRepoSection(repo: RepoActivity): string {
     parts.push("\n### Discussions");
     for (const d of repo.discussions) {
       parts.push(
-        `- #${d.number}: ${d.title} [${d.category}] (by @${d.author}, ${d.authorAssociation}, ${d.comments} comments)`
+        `- #${d.number}: ${d.title} [${d.category}] (by @${d.author}, ${d.authorAssociation}, ${d.comments} comments) ${d.url}`
       );
       if (d.body) parts.push(`  ${d.body}`);
       for (const comment of d.commentContent) {
@@ -191,24 +198,36 @@ Audience: XRPL validators, developers, and non-technical community members.
 
 # Rules
 
+**URLs — CRITICAL:**
+- ONLY use URLs that appear explicitly in the provided data. Every PR, issue, discussion, release, and blog post has a URL in the data.
+- NEVER construct, guess, or infer URLs. If you don't see a URL in the data, do not link to it.
+- For PRs/issues, the URL is in the data line (e.g., "https://github.com/XRPLF/rippled/pull/1234"). Use it directly.
+- The only external URLs you may use without them appearing in the data are: https://x.com/XRPLF and https://x.com/RippleXDev (official accounts).
+
 **Content:**
-- Lead with the single most impactful development as headline
+- Unconfirmed bugs, open issues, and unmerged PRs are never headline material — they belong in "What to Watch" or "Community".
 - Group by theme (protocol, performance, security, SDKs, docs, infra) — not by repo
 - For protocol/amendment changes: explain network impact in plain terms, flag action needed by validators/operators
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Use the Amendment Lifecycle Status to report accurate statuses. Don't present already-known statuses as news unless they changed THIS week.
-- Use week-over-week diff data to show momentum when available
+- Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
+- Use labels to flag important items: "security", "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
+- Use discussion data to surface community conversations, feature proposals, and governance topics
+- If "Week-over-Week Changes" data is present, you MUST include it in "By the Numbers" — show commit velocity changes (↑/↓/flat) and note PRs that were opened last week and merged this week
 - Only facts from the data. No speculation, no assumptions, no filler on quiet weeks.
+- Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance — do not infer severity beyond what the labels and body state. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability.
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
+- Do not repeat the same PR/issue across multiple sections. Each item belongs in ONE section: shipped (merged), in progress (open), or what to watch. Reference by link if needed elsewhere.
 
 **Contributors:**
 - Only flag someone as a new contributor if their authorAssociation is exactly FIRST_TIME_CONTRIBUTOR. Never guess.
+- Never expose raw authorAssociation values (NONE, MEMBER, CONTRIBUTOR, etc.) in the output. Use natural language instead: "community member", "external contributor", "core team".
 
 **Formatting:**
-- Link PRs/issues as markdown links: [rippled#1234](url) — URLs are in the data
+- Link PRs/issues as markdown links: [rippled#1234](url) — use the exact URL from the data
 - Use diff stats (+additions/-deletions) to convey change significance
 - Use linked issues (Closes: #N) to explain WHY, not just what
-- Use exact numbers in "By the Numbers" — no approximations
+- "By the Numbers" must use exact integers — never use "~", "about", or "approximately"
 - Target length: ~800-1200 words for a normal week. Shorter if quiet, longer if major.
 
 # Output format
@@ -216,33 +235,36 @@ Audience: XRPL validators, developers, and non-technical community members.
 # XRPL Developments Weekly Summary: {date_range}
 
 ## Headline
-One sentence — biggest impact on the network or community.
+1-2 sentences summarizing the week's key shipped developments. Cover the 2-3 most significant merged items across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work.
 
 ## What Shipped
 Grouped by theme. Each item: what changed, why it matters, link.
 
 ## In Progress
-Notable open PRs and active branches.
+Notable open PRs and active branches. Mention review status (approved, changes requested, draft) when available.
+
+## What to Watch Next Week
+2-4 bullet points of items likely to land, need attention, or worth following. Based only on open PRs nearing merge, active branches with significant work, ongoing discussions, or announced timelines from the data. No speculation.
 
 ## Community & Discussions
 Issues, discussions, external contributors.
 
 ## By the Numbers
 | Metric | Count |
-Exact counts for repos, PRs merged, PRs opened, releases, contributors, commits.
+Exact integer counts for repos, PRs merged, PRs opened, releases, contributors, commits. No approximations.
 
 ## TL;DR for X (Twitter)
-A thread of 2-4 short posts (each max 280 chars). First post hooks the reader with the headline. Following posts cover the other key developments of the week. No hashtags. Informative, not hype. End the thread with a call to action — link to a relevant repo, PR, release, or https://xrpl.org docs page. You can also reference these official accounts when relevant: @XRPLF (foundation), @RippleXDev (developer updates).
+A thread of 2-4 short posts (each max 280 chars). First post hooks the reader with the headline. Following posts cover the other key developments of the week. No hashtags. Informative, not hype. End the thread with a call to action — link to a relevant repo, PR, release, or doc page ONLY if the URL is in the data. You can also reference @XRPLF (foundation) and @RippleXDev (developer updates).
 
 ## Plain English Summary
 2-3 paragraphs for non-developers. Conversational tone, no jargon. For each key change, explain:
 1. What changed (translate technical terms)
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
 3. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
-End with links to where readers can learn more (release pages, xrpl.org docs, relevant PRs, @XRPLF and @RippleXDev on X for ongoing updates).
+End with links from the data only (release pages, blog posts, relevant PRs). You may also mention @XRPLF and @RippleXDev on X for ongoing updates.
 
 ---
-*Summary AI-generated from GitHub activity data.*`;
+*Summary AI-generated from GitHub activity data. All links sourced from GitHub and xrpl.org.*`;
 
 async function callClaudeWithRetry(
   client: Anthropic,
@@ -365,15 +387,12 @@ export interface SummarizeResult {
   systemPrompt: string;
 }
 
-export async function summarize(
-  apiKey: string,
+export function buildPrompt(
   data: WeeklyData,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
   blogPosts: BlogPost[] = []
-): Promise<SummarizeResult> {
-  const client = new Anthropic({ apiKey });
-
+): { userMessage: string; systemPrompt: string; fullDataLength: number } {
   // Build per-repo sections
   const repoSections = data.repos
     .map(buildRepoSection)
@@ -400,20 +419,33 @@ export async function summarize(
     (xlsContext ? `\n\n---\n\n${xlsContext}` : "") +
     (amendmentContext ? `\n\n---\n\n${amendmentContext}` : "");
 
-  console.log(`\nSending to Claude for summarization (${fullData.length} chars of activity data)...`);
-
   const userMessage = `Here is the raw GitHub activity data for the XRPLF organization for the week of ${data.weekStart} to ${data.weekEnd}. Please produce the weekly summary.\n\n${fullData}`;
 
+  return { userMessage, systemPrompt: SYSTEM_PROMPT, fullDataLength: fullData.length };
+}
+
+export async function summarize(
+  apiKey: string,
+  data: WeeklyData,
+  xlsSpecs: XlsSpec[] = [],
+  amendments: AmendmentStatus[] = [],
+  blogPosts: BlogPost[] = []
+): Promise<SummarizeResult> {
+  const { userMessage, systemPrompt, fullDataLength } = buildPrompt(data, xlsSpecs, amendments, blogPosts);
+
+  console.log(`\nSending to Claude for summarization (${fullDataLength} chars of activity data)...`);
+
+  const client = new Anthropic({ apiKey });
   const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6";
   console.log(`  Using model: ${model}`);
 
   const summary = await callClaudeWithRetry(
     client,
     model,
-    SYSTEM_PROMPT,
+    systemPrompt,
     userMessage,
     10000
   );
 
-  return { summary, input: userMessage, systemPrompt: SYSTEM_PROMPT };
+  return { summary, input: userMessage, systemPrompt };
 }

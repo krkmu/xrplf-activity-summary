@@ -358,9 +358,9 @@ async function fetchActiveBranches(
 
   const activeBranches: ActiveBranch[] = [];
 
-  const branchChecks = branches
-    .filter((b) => b.name !== defaultBranch && !openPRBranchNames.has(b.name))
-;
+  const branchChecks = branches.filter(
+    (b) => b.name !== defaultBranch && !openPRBranchNames.has(b.name)
+  );
 
   for (let i = 0; i < branchChecks.length; i += 5) {
     const batch = branchChecks.slice(i, i + 5);
@@ -706,12 +706,13 @@ export async function fetchAmendmentStatuses(token: string): Promise<AmendmentSt
   while ((match = retireRegex.exec(content)) !== null) {
     const name = match[2];
     const type = match[1];
+    const netStatus = lookupNetworkStatus(type, name);
     amendments.push({
       name,
       type: type as AmendmentStatus["type"],
       supported: false,
       voteBehavior: "Obsolete",
-      networkStatus: lookupNetworkStatus(type, name) === "Unknown" ? "Obsolete" : lookupNetworkStatus(type, name),
+      networkStatus: netStatus === "Unknown" ? "Obsolete" : netStatus,
     });
   }
 
