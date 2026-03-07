@@ -64,6 +64,11 @@ npm run dev -- --prompt-only
 
 # Use Opus for a single run
 CLAUDE_MODEL=claude-opus-4-6 npm run dev
+
+# Build HTML pages from all generated reports
+node scripts/build-pages.js
+# Open locally
+open site/index.html
 ```
 
 ### Output
@@ -77,6 +82,17 @@ output/
 ```
 
 The input file lets you compare exactly what Claude received vs what it produced.
+
+The `build-pages` script generates styled HTML pages in `site/` from all markdown reports. The Twitter/X thread section is excluded from the HTML output.
+
+### GitHub Pages (automated)
+
+A GitHub Action (`.github/workflows/weekly-report.yml`) runs every Friday at 21:00 UTC and can also be triggered manually. It generates the report and deploys it to GitHub Pages.
+
+**Setup:**
+1. Add repo secrets: `GH_PAT` (GitHub Personal Access Token) and `ANTHROPIC_API_KEY`
+2. Enable GitHub Pages: Settings → Pages → Source → "GitHub Actions"
+3. The site will be available at `https://<user>.github.io/<repo>/`
 
 ## Caching
 

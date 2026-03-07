@@ -1,0 +1,68 @@
+name: Weekly Report
+
+on:
+  schedule:
+    # Every Friday at 9 PM UTC
+    - cron: '0 21 * * 5'
+  workflow_dispatch:
+    inputs:
+      weeks_ago:
+        description: 'Weeks ago (0 = current week)'
+        required: false
+        default: '0'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Generate report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          WEEKS_AGO="${{ github.event.inputs.weeks_ago || '0' }}"
+          npm run build
+          node dist/main.js --weeks-ago="$WEEKS_AGO"
+
+      - name: Commit report to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add output/*.md ':!output/*_input.md' ':!output/test*.md'
+          git diff --cached --quiet || git commit -m "Add weekly report $(date +%Y-%m-%d)"
+          git push
+
+      - name: Build HTML pages
+        run: node scripts/build-pages.js
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: generate
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

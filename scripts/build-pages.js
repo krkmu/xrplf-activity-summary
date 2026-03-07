@@ -1,0 +1,120 @@
+import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { join } from "path";
+
+const OUTPUT_DIR = join(import.meta.dirname, "..", "output");
+const SITE_DIR = join(import.meta.dirname, "..", "site");
+
+mkdirSync(SITE_DIR, { recursive: true });
+
+// Find all summary markdown files (exclude _input files)
+const summaries = readdirSync(OUTPUT_DIR)
+  .filter((f) => f.endsWith(".md") && !f.includes("_input") && !f.startsWith("test"))
+  .sort()
+  .reverse();
+
+function stripTwitterSection(md) {
+  return md.replace(/## TL;DR for X \(Twitter\)[\s\S]*?(?=\n## |\n---\n\*Summary|$)/, "");
+}
+
+function markdownToHtml(md) {
+  return stripTwitterSection(md)
+    // Headers
+    .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+    // Bold and italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    // Code
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // Horizontal rules
+    .replace(/^---+$/gm, "<hr>")
+    // Tables
+    .replace(/^\|(.+)\|$/gm, (match) => {
+      const cells = match
+        .split("|")
+        .filter(Boolean)
+        .map((c) => c.trim());
+      if (cells.every((c) => /^[-:]+$/.test(c))) return ""; // separator row
+      const tag = "td";
+      return "<tr>" + cells.map((c) => `<${tag}>${c}</${tag}>`).join("") + "</tr>";
+    })
+    // List items
+    .replace(/^- (.+)$/gm, "<li>$1</li>")
+    // Blockquotes
+    .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
+    // Paragraphs (lines not already wrapped)
+    .replace(/^(?!<[hluotb]|<hr|<li|<blockquote|$)(.+)$/gm, "<p>$1</p>")
+    // Wrap consecutive <li> in <ul>
+    .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
+    // Wrap consecutive <tr> in <table>
+    .replace(/(<tr>.*<\/tr>\n?)+/g, (match) => `<table>${match}</table>`)
+    // Clean up empty lines
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+function buildPage(title, body) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<style>
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #30363d; --card: #161b22; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; margin-top: 2rem; margin-bottom: 0.5rem; color: var(--accent); }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.3rem; }
+  p { margin: 0.5rem 0; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { background: var(--card); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
+  ul { padding-left: 1.5rem; margin: 0.5rem 0; }
+  li { margin: 0.3rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  td { padding: 0.4rem 0.8rem; border: 1px solid var(--border); }
+  tr:nth-child(even) { background: var(--card); }
+  blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 0.5rem 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  .nav { margin-bottom: 2rem; }
+  .nav a { margin-right: 1rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+${body}
+<footer>XRPLF Weekly Activity Summary &middot; AI-generated from GitHub data &middot; <a href="https://github.com/XRPLF">XRPLF</a></footer>
+</body>
+</html>`;
+}
+
+// Build individual report pages
+const reportLinks = [];
+for (const file of summaries) {
+  const md = readFileSync(join(OUTPUT_DIR, file), "utf-8");
+  const slug = file.replace(".md", "");
+  const html = markdownToHtml(md);
+  const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
+  const page = buildPage(`XRPLF Weekly Report — ${slug}`, nav + html);
+  writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
+  reportLinks.push({ slug, file });
+  console.log(`  Built ${slug}.html`);
+}
+
+// Build index page
+const indexBody = `
+<h1>XRPLF Weekly Activity Reports</h1>
+<p>AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
+<hr>
+<ul>
+${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.slug}</a></li>`).join("\n")}
+</ul>
+`;
+writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPLF Weekly Reports", indexBody), "utf-8");
+console.log(`  Built index.html (${reportLinks.length} reports)`);
