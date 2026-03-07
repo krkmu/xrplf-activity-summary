@@ -1,10 +1,14 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "fs";
 import { join } from "path";
 
 const OUTPUT_DIR = join(import.meta.dirname, "..", "output");
 const SITE_DIR = join(import.meta.dirname, "..", "site");
 
 mkdirSync(SITE_DIR, { recursive: true });
+
+// Copy static assets
+const STATIC_DIR = join(import.meta.dirname, "..", "static");
+copyFileSync(join(STATIC_DIR, "og-image.png"), join(SITE_DIR, "og-image.png"));
 
 // Find all summary markdown files (exclude _input files)
 const summaries = readdirSync(OUTPUT_DIR)
@@ -86,10 +90,12 @@ function buildPage(title, body) {
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://xrplbrew.com/og-image.png">
 <meta property="og:url" content="https://xrplbrew.com">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="Weekly AI-generated summaries of XRPLF GitHub activity. What shipped, what's in progress, and what to watch.">
+<meta name="twitter:image" content="https://xrplbrew.com/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <style>
   :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #30363d; --card: #161b22; }
@@ -112,6 +118,10 @@ function buildPage(title, body) {
   .nav { margin-bottom: 2rem; }
   .nav a { margin-right: 1rem; }
   footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; text-align: center; }
+  .report-list { list-style: none; padding: 0; }
+  .report-list li { margin: 0.5rem 0; }
+  .report-list a { display: block; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.2rem; background: var(--card); transition: border-color 0.2s; }
+  .report-list a:hover { border-color: var(--accent); text-decoration: none; }
 </style>
 </head>
 <body>
@@ -133,7 +143,12 @@ for (const file of summaries) {
   const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
   const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + html);
   writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
-  reportLinks.push({ slug, file });
+  // Format date range: "Feb 28 – Mar 7, 2026"
+  const [start, end] = slug.split("_");
+  const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const year = end.slice(0, 4);
+  const dateLabel = `${fmt(start)} – ${fmt(end)}, ${year}`;
+  reportLinks.push({ slug, file, dateLabel });
   console.log(`  Built ${slug}.html`);
 }
 
@@ -143,8 +158,8 @@ const indexBody = `
 <p>Latest development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
 <p style="margin-top: 1rem;">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
 <hr>
-<ul>
-${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.slug}</a></li>`).join("\n")}
+<ul class="report-list">
+${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.dateLabel}</a></li>`).join("\n")}
 </ul>
 `;
 writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPL Monday Brew ☕", indexBody), "utf-8");
