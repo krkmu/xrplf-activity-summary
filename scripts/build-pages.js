@@ -102,6 +102,7 @@ function buildPage(title, body) {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
   h1 { font-size: 1.8rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  h1.site-title { font-size: 2.4rem; text-align: center; border: none; padding-bottom: 0; margin-bottom: 0.3rem; }
   h2 { font-size: 1.4rem; margin-top: 2rem; margin-bottom: 0.5rem; color: var(--accent); }
   h3 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.3rem; }
   p { margin: 0.5rem 0; }
@@ -154,7 +155,7 @@ for (const file of summaries) {
 
 // Build index page
 const indexBody = `
-<h1>XRPL Monday Brew ☕</h1>
+<h1 class="site-title">XRPL Monday Brew ☕</h1>
 <p>Latest development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
 <p style="margin-top: 1rem;">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
 <hr>
