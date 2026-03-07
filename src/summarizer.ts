@@ -234,7 +234,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 
 # XRPL Developments Weekly Summary: {date_range}
 
-## Headline
+## TL;DR
 1-2 sentences summarizing the week's key shipped developments. Cover the 2-3 most significant merged items across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work.
 
 ## What Shipped

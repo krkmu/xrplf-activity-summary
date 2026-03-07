@@ -20,13 +20,12 @@ function reorderSections(md) {
   // Strip Twitter section
   md = md.replace(/## TL;DR for X \(Twitter\)[\s\S]*?(?=\n## |\n---\n\*Summary|$)/, "");
 
-  // Extract Plain English Summary, rename to Summary, move after Headline
+  // Extract Plain English Summary, rename to Summary, move after TL;DR
   const plainMatch = md.match(/## Plain English Summary[\s\S]*?(?=\n---|\n## [^P]|$)/);
   if (plainMatch) {
     md = md.replace(plainMatch[0], "");
     const summary = plainMatch[0].replace("## Plain English Summary", "## Summary");
-    // Insert after Headline section
-    md = md.replace(/(## Headline[\s\S]*?)\n---/, `$1\n\n${summary}\n---`);
+    md = md.replace(/(## (?:TL;DR|Headline)[\s\S]*?)\n---/, `$1\n\n${summary}\n---`);
   }
 
   // Replace footer disclaimer
