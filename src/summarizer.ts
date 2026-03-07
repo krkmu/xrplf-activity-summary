@@ -215,7 +215,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 - Use discussion data to surface community conversations, feature proposals, and governance topics
 - If "Week-over-Week Changes" data is present, you MUST include it in "By the Numbers" — show commit velocity changes (↑/↓/flat) and note PRs that were opened last week and merged this week
 - Only facts from the data. No speculation, no assumptions, no filler on quiet weeks.
-- Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance — do not infer severity beyond what the labels and body state. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability.
+- Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance — do not infer severity beyond what the labels and body state. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability. NEVER use words like "Critical", "Urgent", "Emergency", or "Security" in section titles or headings unless the PR/issue has the corresponding label. A bug fix is a bug fix, not a "Critical Fix".
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
 - Do not repeat the same PR/issue across multiple sections. Each item belongs in ONE section: shipped (merged), in progress (open), or what to watch. Reference by link if needed elsewhere.
 
