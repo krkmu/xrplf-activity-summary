@@ -132,6 +132,7 @@ for (const file of summaries) {
 const indexBody = `
 <h1>XRPL Monday Brew ☕</h1>
 <p>Latest development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
+<p style="margin-top: 1rem;">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
 <hr>
 <ul>
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.slug}</a></li>`).join("\n")}
