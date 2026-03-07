@@ -46,7 +46,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/*.md ':!output/*_input.md' ':!output/test*.md'
+          git add --ignore-errors output/*.md || true
+          git reset output/*_input.md output/test*.md 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Add weekly report $(date +%Y-%m-%d)"
           git push
 
