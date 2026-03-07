@@ -1,0 +1,121 @@
+import { config } from "dotenv";
+import { writeFileSync, mkdirSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import {
+  collectWeeklyData,
+  loadCachedData,
+  saveCachedData,
+  fetchXlsSpecs,
+  saveCachedSpecs,
+  fetchAmendmentStatuses,
+  saveCachedAmendments,
+  fetchBlogPosts,
+} from "./collector.js";
+import { summarize } from "./summarizer.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = join(__dirname, "..");
+
+config({ path: join(PROJECT_ROOT, ".env") });
+
+function getWeekDates(weeksAgo: number): { start: string; end: string } {
+  const now = new Date();
+  const end = new Date(now);
+  end.setDate(end.getDate() - 7 * weeksAgo);
+  const start = new Date(end);
+  start.setDate(start.getDate() - 7);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
+}
+
+async function main() {
+  const githubToken = process.env.GITHUB_TOKEN;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!githubToken) {
+    console.error("Missing GITHUB_TOKEN in .env");
+    process.exit(1);
+  }
+  if (!anthropicKey) {
+    console.error("Missing ANTHROPIC_API_KEY in .env");
+    process.exit(1);
+  }
+
+  // Parse flags
+  const weeksAgoArg = process.argv.find((a) => a.startsWith("--weeks-ago="));
+  const weeksAgo = weeksAgoArg ? parseInt(weeksAgoArg.split("=")[1], 10) : 0;
+  const noCache = process.argv.includes("--no-cache");
+
+  const cacheDir = join(PROJECT_ROOT, ".cache");
+  const outputDir = join(PROJECT_ROOT, "output");
+  mkdirSync(outputDir, { recursive: true });
+
+  // Always fetch fresh specs and amendments — they evolve week to week
+  // and stale data would mislead the summary (e.g., amendment status changes)
+  const xlsSpecs = await fetchXlsSpecs(githubToken);
+  saveCachedSpecs(cacheDir, xlsSpecs);
+
+  const amendments = await fetchAmendmentStatuses(githubToken);
+  saveCachedAmendments(cacheDir, amendments);
+
+  // Try loading from cache first
+  const { start: weekStart, end: weekEnd } = getWeekDates(weeksAgo);
+
+  // Fetch blog posts for the week
+  const blogPosts = await fetchBlogPosts(githubToken, weekStart, weekEnd);
+  let data = noCache ? null : loadCachedData(cacheDir, weekStart, weekEnd);
+
+  if (!data) {
+    data = await collectWeeklyData(githubToken, weeksAgo);
+    saveCachedData(cacheDir, data);
+  }
+
+  // Try loading previous week for diff comparison
+  const { start: prevStart, end: prevEnd } = getWeekDates(weeksAgo + 1);
+  const previousWeek = loadCachedData(cacheDir, prevStart, prevEnd);
+  if (previousWeek) {
+    data.previousWeek = previousWeek;
+    console.log(`Loaded previous week data (${prevStart} to ${prevEnd}) for comparison`);
+  } else {
+    console.log(`No cached data for previous week (${prevStart} to ${prevEnd}) — skipping week-over-week diff`);
+  }
+
+  // Check if there's any activity
+  const totalActivity = data.repos.reduce(
+    (sum, r) =>
+      sum +
+      r.mergedPRs.length +
+      r.openedPRs.length +
+      r.openedIssues.length +
+      r.closedIssues.length +
+      r.discussions.length +
+      r.releases.length +
+      r.commits.totalCount,
+    0
+  );
+
+  if (totalActivity === 0) {
+    console.log("\nNo activity found for this period. Skipping summary generation.");
+    return;
+  }
+
+  // Summarize with Claude
+  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts);
+
+  const base = `${data.weekStart}_${data.weekEnd}`;
+  const outputPath = join(outputDir, `${base}.md`);
+  const inputPath = join(outputDir, `${base}_input.md`);
+
+  writeFileSync(outputPath, result.summary, "utf-8");
+  writeFileSync(inputPath, `# System Prompt\n\n${result.systemPrompt}\n\n---\n\n# User Message\n\n${result.input}`, "utf-8");
+  console.log(`\nSummary written to ${outputPath}`);
+  console.log(`Input saved to ${inputPath}`);
+}
+
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

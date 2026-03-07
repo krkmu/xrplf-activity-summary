@@ -1,0 +1,22 @@
+{
+  "name": "xrplf-activity-summary",
+  "author": "@krkmu",
+  "version": "0.1.0",
+  "description": "Weekly TL;DR of XRPLF GitHub activity for the XRPL community",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@octokit/graphql": "^8.2.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
