@@ -108,7 +108,7 @@ function buildPage(title, body) {
 <body>
 ${body}
 <footer>
-<p>XRPLF Weekly Activity Summary &middot; AI-generated using Claude (${process.env.CLAUDE_MODEL || "claude-sonnet-4-6"}) from <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos data &middot; Proposed by <a href="https://x.com/krkmu_">krkmu</a></p>
+<p>XRPL Monday Brew ☕ &middot; AI-generated using Claude (${process.env.CLAUDE_MODEL || "claude-sonnet-4-6"}) from <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos data &middot; Proposed by <a href="https://x.com/krkmu_">krkmu</a></p>
 <p style="margin-top: 0.5rem;">Disclaimer: Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
 </footer>
 </body>
@@ -122,7 +122,7 @@ for (const file of summaries) {
   const slug = file.replace(".md", "");
   const html = markdownToHtml(md);
   const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
-  const page = buildPage(`XRPLF Weekly Report — ${slug}`, nav + html);
+  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + html);
   writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
   reportLinks.push({ slug, file });
   console.log(`  Built ${slug}.html`);
@@ -130,12 +130,12 @@ for (const file of summaries) {
 
 // Build index page
 const indexBody = `
-<h1>XRPLF Weekly Activity Reports</h1>
-<p>AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
+<h1>XRPL Monday Brew ☕</h1>
+<p>Latest development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
 <hr>
 <ul>
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.slug}</a></li>`).join("\n")}
 </ul>
 `;
-writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPLF Weekly Reports", indexBody), "utf-8");
+writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPL Monday Brew ☕", indexBody), "utf-8");
 console.log(`  Built index.html (${reportLinks.length} reports)`);
