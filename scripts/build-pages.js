@@ -12,12 +12,30 @@ const summaries = readdirSync(OUTPUT_DIR)
   .sort()
   .reverse();
 
-function stripTwitterSection(md) {
-  return md.replace(/## TL;DR for X \(Twitter\)[\s\S]*?(?=\n## |\n---\n\*Summary|$)/, "");
+function reorderSections(md) {
+  // Strip Twitter section
+  md = md.replace(/## TL;DR for X \(Twitter\)[\s\S]*?(?=\n## |\n---\n\*Summary|$)/, "");
+
+  // Extract Plain English Summary, rename to Summary, move after Headline
+  const plainMatch = md.match(/## Plain English Summary[\s\S]*?(?=\n---|\n## [^P]|$)/);
+  if (plainMatch) {
+    md = md.replace(plainMatch[0], "");
+    const summary = plainMatch[0].replace("## Plain English Summary", "## Summary");
+    // Insert after Headline section
+    md = md.replace(/(## Headline[\s\S]*?)\n---/, `$1\n\n${summary}\n---`);
+  }
+
+  // Replace footer disclaimer
+  md = md.replace(
+    /\*Summary AI-generated.*?\*/,
+    ""
+  );
+
+  return md;
 }
 
 function markdownToHtml(md) {
-  return stripTwitterSection(md)
+  return reorderSections(md)
     // Headers
     .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
     .replace(/^### (.+)$/gm, "<h3>$1</h3>")
@@ -89,7 +107,10 @@ function buildPage(title, body) {
 </head>
 <body>
 ${body}
-<footer>XRPLF Weekly Activity Summary &middot; AI-generated from GitHub data &middot; <a href="https://github.com/XRPLF">XRPLF</a></footer>
+<footer>
+<p>XRPLF Weekly Activity Summary &middot; AI-generated using Claude (${process.env.CLAUDE_MODEL || "claude-sonnet-4-6"}) from <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos data &middot; Proposed by <a href="https://x.com/krkmu_">krkmu</a></p>
+<p style="margin-top: 0.5rem;">Disclaimer: Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
+</footer>
 </body>
 </html>`;
 }
