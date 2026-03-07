@@ -148,6 +148,10 @@ To adjust, search for the relevant `first:` or `last:` values in the GraphQL que
 - **Anthropic output limit** — `max_tokens` is set to 10000. Summaries for unusually active weeks may be truncated (a warning is logged if this happens).
 - **Anthropic context window** — Very large weeks with many PRs/issues could approach the model's input limit. The prompt is optimized to minimize token usage (compact amendment context, truncated blog bodies).
 
+## Disclaimer
+
+Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.
+
 ## Project Structure
 
 ```
