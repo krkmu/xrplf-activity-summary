@@ -102,7 +102,7 @@ function buildPage(title, body) {
   hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
   .nav { margin-bottom: 2rem; }
   .nav a { margin-right: 1rem; }
-  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; text-align: center; }
 </style>
 </head>
 <body>
