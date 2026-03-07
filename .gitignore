@@ -5,5 +5,4 @@ output/*_input.md
 output/test*.md
 .cache/
 site/
-package-lock.json
 .claude/
