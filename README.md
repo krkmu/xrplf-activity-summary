@@ -152,6 +152,10 @@ To adjust, search for the relevant `first:` or `last:` values in the GraphQL que
 
 Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.
 
+## License
+
+[CC BY-NC 4.0](LICENSE) — Free to use and modify for non-commercial purposes with attribution.
+
 ## Project Structure
 
 ```
