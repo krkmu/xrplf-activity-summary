@@ -82,6 +82,15 @@ function buildPage(title, body) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
+<meta name="description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization. What shipped, what's in progress, and what to watch.">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://xrplbrew.com">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="Weekly AI-generated summaries of XRPLF GitHub activity. What shipped, what's in progress, and what to watch.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <style>
   :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #30363d; --card: #161b22; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
