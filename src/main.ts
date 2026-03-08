@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, readFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
@@ -21,13 +21,16 @@ config({ path: join(PROJECT_ROOT, ".env") });
 
 function getWeekDates(weeksAgo: number): { start: string; end: string } {
   const now = new Date();
-  const end = new Date(now);
-  end.setDate(end.getDate() - 7 * weeksAgo);
-  const start = new Date(end);
-  start.setDate(start.getDate() - 7);
+  // Find the most recent Monday (or today if Monday)
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() - daysSinceMonday - 7 * weeksAgo);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
   };
 }
 
@@ -69,14 +72,14 @@ async function main() {
     saveCachedData(cacheDir, data);
   }
 
-  // Try loading previous week for diff comparison
+  // Load previous week's report for week-over-week comparison
   const { start: prevStart, end: prevEnd } = getWeekDates(weeksAgo + 1);
-  const previousWeek = loadCachedData(cacheDir, prevStart, prevEnd);
-  if (previousWeek) {
-    data.previousWeek = previousWeek;
-    console.log(`Loaded previous week data (${prevStart} to ${prevEnd}) for comparison`);
+  const prevReportPath = join(outputDir, `${prevStart}_${prevEnd}.md`);
+  if (existsSync(prevReportPath)) {
+    data.previousReport = readFileSync(prevReportPath, "utf-8");
+    console.log(`Loaded previous week report (${prevStart}_${prevEnd}.md) for comparison`);
   } else {
-    console.log(`No cached data for previous week (${prevStart} to ${prevEnd}) — skipping week-over-week diff`);
+    console.log(`No previous week report found (${prevReportPath}) — skipping week-over-week comparison`);
   }
 
   // Check if there's any activity

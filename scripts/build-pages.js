@@ -38,11 +38,12 @@ function reorderSections(md) {
 }
 
 function markdownToHtml(md) {
-  return reorderSections(md)
+  let html = reorderSections(md)
     // Headers
     .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
     .replace(/^### (.+)$/gm, "<h3>$1</h3>")
     .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^# (.+?):\s*(.+)$/gm, '<h1>$1<br><span class="date-subtitle">$2</span></h1>')
     .replace(/^# (.+)$/gm, "<h1>$1</h1>")
     // Bold and italic
     .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
@@ -50,8 +51,8 @@ function markdownToHtml(md) {
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     // Code
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    // Links — open external links in new tab
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     // Horizontal rules
     .replace(/^---+$/gm, "<hr>")
     // Tables
@@ -76,6 +77,20 @@ function markdownToHtml(md) {
     .replace(/(<tr>.*<\/tr>\n?)+/g, (match) => `<table>${match}</table>`)
     // Clean up empty lines
     .replace(/\n{3,}/g, "\n\n");
+
+  // Wrap TL;DR content in a card
+  html = html.replace(
+    /(<h2>TL;DR<\/h2>)\s*([\s\S]*?)(?=<hr>|<h2>)/,
+    (_, heading, content) => `${heading}\n<div class="tldr">${content.trim()}</div>\n`
+  );
+
+  // Wrap Summary paragraphs in a card
+  html = html.replace(
+    /(<h2>Summary<\/h2>)\s*([\s\S]*?)(?=<hr>|<h2>)/,
+    (_, heading, content) => `${heading}\n<div class="section-card">${content.trim()}</div>\n`
+  );
+
+  return html;
 }
 
 function buildPage(title, body) {
@@ -97,38 +112,51 @@ function buildPage(title, body) {
 <meta name="twitter:image" content="https://xrplbrew.com/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <style>
-  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #30363d; --card: #161b22; }
+  :root { --bg: #0d1117; --fg: #c9d1d9; --fg-bright: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #21262d; --card: #161b22; --card-hover: #1c2128; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 2rem; max-width: 900px; margin: 0 auto; }
-  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.8; padding: 2rem 1.5rem; max-width: 780px; margin: 0 auto; font-size: 16px; -webkit-font-smoothing: antialiased; }
+  h1 { font-size: 1.8rem; color: var(--fg-bright); margin: 2.5rem 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); letter-spacing: -0.02em; }
+  h1 .date-subtitle { display: block; font-size: 1.15rem; font-weight: 400; color: var(--accent); margin-top: 0.3rem; }
   h1.site-title { font-size: 2.4rem; text-align: center; border: none; padding-bottom: 0; margin-bottom: 0.3rem; }
-  h2 { font-size: 1.4rem; margin-top: 2rem; margin-bottom: 0.5rem; color: var(--accent); }
-  h3 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.3rem; }
-  p { margin: 0.5rem 0; }
+  h2 { font-size: 1.35rem; color: var(--accent); margin: 2.5rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); letter-spacing: -0.01em; }
+  h3 { font-size: 1.1rem; color: var(--fg-bright); margin: 1.8rem 0 0.5rem; }
+  h4 { font-size: 1rem; color: var(--fg-bright); margin: 1.4rem 0 0.4rem; }
+  p { margin: 0.8rem 0; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  code { background: var(--card); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; }
-  ul { padding-left: 1.5rem; margin: 0.5rem 0; }
-  li { margin: 0.3rem 0; }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  td { padding: 0.4rem 0.8rem; border: 1px solid var(--border); }
-  tr:nth-child(even) { background: var(--card); }
-  blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 0.5rem 0; }
-  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
-  .nav { margin-bottom: 2rem; }
-  .nav a { margin-right: 1rem; }
-  footer { margin-top: 3rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); padding-top: 1rem; text-align: center; }
+  strong { color: var(--fg-bright); }
+  code { background: var(--card); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.88em; border: 1px solid var(--border); }
+  ul, ol { padding-left: 1.5rem; margin: 0.8rem 0; }
+  li { margin: 0.5rem 0; line-height: 1.7; }
+  li p { margin: 0.3rem 0; }
+  table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: 0.92em; }
+  td { padding: 0.5rem 1rem; border: 1px solid var(--border); }
+  tr:first-child td { font-weight: 600; color: var(--fg-bright); background: var(--card); }
+  tr:nth-child(even) { background: rgba(22, 27, 34, 0.5); }
+  blockquote { border-left: 3px solid var(--accent); padding: 0.6rem 1rem; color: var(--muted); margin: 1rem 0; background: rgba(22, 27, 34, 0.4); border-radius: 0 6px 6px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+  .nav { margin-bottom: 2rem; font-size: 0.9rem; }
+  .nav a { color: var(--muted); transition: color 0.2s; }
+  .nav a:hover { color: var(--accent); text-decoration: none; }
+  .tldr { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1.2rem 0; font-size: 1.05em; line-height: 1.7; }
+  .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; }
+  footer { margin-top: 4rem; color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--border); padding-top: 1.2rem; text-align: center; line-height: 1.6; }
   .report-list { list-style: none; padding: 0; }
-  .report-list li { margin: 0.5rem 0; }
-  .report-list a { display: block; border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1.2rem; background: var(--card); transition: border-color 0.2s; }
-  .report-list a:hover { border-color: var(--accent); text-decoration: none; }
+  .report-list li { margin: 0.6rem 0; }
+  .report-list a { display: block; border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.3rem; background: var(--card); transition: border-color 0.2s, background 0.2s; font-size: 1.05em; }
+  .report-list a:hover { border-color: var(--accent); background: var(--card-hover); text-decoration: none; }
+  .index-intro { text-align: center; color: var(--muted); max-width: 600px; margin: 0 auto; }
+  .index-intro p { margin: 0.6rem 0; }
+  .index-desc { font-size: 0.95em; line-height: 1.7; margin-top: 1.2rem; color: var(--fg); text-align: justify; }
+  @media (max-width: 600px) { body { padding: 1rem; font-size: 15px; } h1 { font-size: 1.5rem; } h2 { font-size: 1.2rem; } .tldr { padding: 1rem; } }
 </style>
 </head>
 <body>
 ${body}
 <footer>
-<p>XRPL Monday Brew ☕ &middot; AI-generated using Claude (${process.env.CLAUDE_MODEL || "claude-sonnet-4-6"}) from <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos data &middot; Proposed by <a href="https://x.com/krkmu_">krkmu</a></p>
-<p style="margin-top: 0.5rem;">Disclaimer: Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
+<p><strong>XRPL Monday Brew ☕</strong></p>
+<p>AI-generated from reports <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos using Claude &middot; Built by <a href="https://x.com/krkmu_">krkmu</a></p>
+<p style="margin-top: 0.8rem; font-style: italic; opacity: 0.75;">Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
 </footer>
 </body>
 </html>`;
@@ -155,8 +183,10 @@ for (const file of summaries) {
 // Build index page
 const indexBody = `
 <h1 class="site-title">XRPL Monday Brew ☕</h1>
-<p>Latest development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
-<p style="margin-top: 1rem;">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
+<div class="index-intro">
+<p>Latest XRPL development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
+<p class="index-desc">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
+</div>
 <hr>
 <ul class="report-list">
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.dateLabel}</a></li>`).join("\n")}

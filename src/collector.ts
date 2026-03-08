@@ -27,13 +27,18 @@ const ORG = "XRPLF";
 
 function getWeekRange(weeksAgo = 0): { since: string; until: string } {
   const now = new Date();
-  const end = new Date(now);
-  end.setDate(end.getDate() - 7 * weeksAgo);
-  const start = new Date(end);
-  start.setDate(start.getDate() - 7);
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  const monday = new Date(now);
+  monday.setUTCDate(monday.getUTCDate() - daysSinceMonday - 7 * weeksAgo);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
+  // Set to start/end of day for GitHub API filtering
+  monday.setUTCHours(0, 0, 0, 0);
+  sunday.setUTCHours(23, 59, 59, 999);
   return {
-    since: start.toISOString(),
-    until: end.toISOString(),
+    since: monday.toISOString(),
+    until: sunday.toISOString(),
   };
 }
 

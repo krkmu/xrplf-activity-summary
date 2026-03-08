@@ -136,61 +136,6 @@ function buildRepoSection(repo: RepoActivity): string {
   return hasActivity ? parts.join("\n") : "";
 }
 
-function buildWeekDiffSection(current: WeeklyData, previous: WeeklyData): string {
-  const lines: string[] = ["## Week-over-Week Changes"];
-
-  for (const repo of current.repos) {
-    const prevRepo = previous.repos.find((r) => r.repo === repo.repo);
-    if (!prevRepo) continue;
-
-    const notes: string[] = [];
-
-    // PRs that were open last week and merged this week
-    const prevOpenNumbers = new Set(prevRepo.openedPRs.map((p) => p.number));
-    const newlyMerged = repo.mergedPRs.filter((p) => prevOpenNumbers.has(p.number));
-    if (newlyMerged.length > 0) {
-      notes.push(
-        `Opened last week, now merged: ${newlyMerged.map((p) => `#${p.number} (${p.title})`).join(", ")}`
-      );
-    }
-
-    // Issues that were open last week and closed this week
-    const prevOpenIssueNumbers = new Set(prevRepo.openedIssues.map((i) => i.number));
-    const newlyClosed = repo.closedIssues.filter((i) => prevOpenIssueNumbers.has(i.number));
-    if (newlyClosed.length > 0) {
-      notes.push(
-        `Opened last week, now closed: ${newlyClosed.map((i) => `#${i.number} (${i.title})`).join(", ")}`
-      );
-    }
-
-    // PRs still open from last week (long-running)
-    const currentOpenNumbers = new Set(repo.openedPRs.map((p) => p.number));
-    const stillOpen = prevRepo.openedPRs.filter((p) => currentOpenNumbers.has(p.number));
-    if (stillOpen.length > 0) {
-      notes.push(
-        `Still in progress from last week: ${stillOpen.map((p) => `#${p.number} (${p.title})`).join(", ")}`
-      );
-    }
-
-    // Commit velocity comparison
-    const prevCommits = prevRepo.commits.totalCount;
-    const currCommits = repo.commits.totalCount;
-    if (prevCommits > 0 || currCommits > 0) {
-      const delta = currCommits - prevCommits;
-      const direction = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-      notes.push(`Commit velocity: ${currCommits} (${direction} from ${prevCommits} last week)`);
-    }
-
-    if (notes.length > 0) {
-      lines.push(`\n### ${repo.repo}`);
-      for (const note of notes) {
-        lines.push(`- ${note}`);
-      }
-    }
-  }
-
-  return lines.length > 1 ? lines.join("\n") : "";
-}
 
 const SYSTEM_PROMPT = `You are a DevRel / technical writer for the XRP Ledger community. Transform raw GitHub activity data into an engaging weekly summary.
 
@@ -213,7 +158,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
 - Use labels to flag important items: "security", "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
 - Use discussion data to surface community conversations, feature proposals, and governance topics
-- If "Week-over-Week Changes" data is present, you MUST include it in "By the Numbers" — show commit velocity changes (↑/↓/flat) and note PRs that were opened last week and merged this week
+- If a "Previous Week Report" is provided, you MUST compare it with the current week in "By the Numbers" — show changes in PR/commit counts (↑/↓/flat), note items that were "In Progress" last week and shipped this week, and highlight new trends
 - Only facts from the data. No speculation, no assumptions, no filler on quiet weeks.
 - Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance — do not infer severity beyond what the labels and body state. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability. NEVER use words like "Critical", "Urgent", "Emergency", or "Security" in section titles or headings unless the PR/issue has the corresponding label. A bug fix is a bug fix, not a "Critical Fix".
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
@@ -398,11 +343,10 @@ export function buildPrompt(
     .map(buildRepoSection)
     .filter(Boolean);
 
-  // Build week-over-week diff if previous week data is available
-  let diffSection = "";
-  if (data.previousWeek) {
-    diffSection = buildWeekDiffSection(data, data.previousWeek);
-  }
+  // Previous week report for week-over-week comparison
+  const prevReportSection = data.previousReport
+    ? `## Previous Week Report (for comparison)\n\n${data.previousReport}`
+    : "";
 
   // Build XLS specs context
   const xlsContext = buildXlsContext(xlsSpecs);
@@ -414,7 +358,7 @@ export function buildPrompt(
   const blogContext = buildBlogContext(blogPosts);
 
   const fullData = repoSections.join("\n\n---\n\n") +
-    (diffSection ? `\n\n---\n\n${diffSection}` : "") +
+    (prevReportSection ? `\n\n---\n\n${prevReportSection}` : "") +
     (blogContext ? `\n\n---\n\n${blogContext}` : "") +
     (xlsContext ? `\n\n---\n\n${xlsContext}` : "") +
     (amendmentContext ? `\n\n---\n\n${amendmentContext}` : "");

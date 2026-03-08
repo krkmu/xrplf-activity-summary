@@ -110,5 +110,5 @@ export interface WeeklyData {
   weekStart: string;
   weekEnd: string;
   repos: RepoActivity[];
-  previousWeek?: WeeklyData;
+  previousReport?: string;
 }
