@@ -159,6 +159,7 @@ ${body}
 <p>AI-generated from reports <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos using Claude &middot; Built by <a href="https://x.com/krkmu_">krkmu</a></p>
 <p style="margin-top: 0.8rem; font-style: italic; opacity: 0.75;">Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
 </footer>
+<script data-goatcounter="https://xrplbrew.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>`;
 }
