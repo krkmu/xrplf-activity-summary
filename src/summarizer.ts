@@ -330,6 +330,8 @@ export interface SummarizeResult {
   summary: string;
   input: string;
   systemPrompt: string;
+  model: string;
+  generatedAt: string;
 }
 
 export function buildPrompt(
@@ -391,5 +393,5 @@ export async function summarize(
     10000
   );
 
-  return { summary, input: userMessage, systemPrompt };
+  return { summary, input: userMessage, systemPrompt, model, generatedAt: new Date().toISOString() };
 }

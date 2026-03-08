@@ -140,6 +140,7 @@ function buildPage(title, body) {
   .nav a:hover { color: var(--accent); text-decoration: none; }
   .tldr { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1.2rem 0; font-size: 1.05em; line-height: 1.7; }
   .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; }
+  .gen-info { margin-top: 2.5rem; padding: 0.8rem 1rem; font-size: 0.82rem; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; text-align: center; font-style: italic; }
   footer { margin-top: 4rem; color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--border); padding-top: 1.2rem; text-align: center; line-height: 1.6; }
   .report-list { list-style: none; padding: 0; }
   .report-list li { margin: 0.6rem 0; }
@@ -168,8 +169,15 @@ for (const file of summaries) {
   const md = readFileSync(join(OUTPUT_DIR, file), "utf-8");
   const slug = file.replace(".md", "");
   const html = markdownToHtml(md);
+  // Extract generation metadata from HTML comment
+  const metaMatch = md.match(/<!-- generated: (.+?) \| model: (.+?) -->/);
+  const genDate = metaMatch ? new Date(metaMatch[1]).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : null;
+  const genModel = metaMatch ? metaMatch[2] : null;
+  const genInfo = genDate ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
   const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
-  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + html);
+  // Remove trailing double <hr> before gen-info
+  const trimmedHtml = genInfo ? html.replace(/(<hr>\s*(<p>.*?<\/p>\s*)?){2,}$/, "") : html;
+  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + trimmedHtml + genInfo);
   writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
   // Format date range: "Feb 28 – Mar 7, 2026"
   const [start, end] = slug.split("_");

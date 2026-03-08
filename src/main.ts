@@ -122,7 +122,8 @@ async function main() {
   const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts);
 
   const outputPath = join(outputDir, `${base}.md`);
-  writeFileSync(outputPath, result.summary, "utf-8");
+  const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;
+  writeFileSync(outputPath, result.summary + metadata, "utf-8");
   writeFileSync(inputPath, `# System Prompt\n\n${result.systemPrompt}\n\n---\n\n# User Message\n\n${result.input}`, "utf-8");
   console.log(`\nSummary written to ${outputPath}`);
   console.log(`Input saved to ${inputPath}`);

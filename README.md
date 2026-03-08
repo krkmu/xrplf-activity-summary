@@ -2,6 +2,8 @@
 
 Collects GitHub activity across the [XRPLF](https://github.com/XRPLF) organization and generates a weekly markdown summary using Claude.
 
+Published as [XRPL Monday Brew ☕](https://xrplbrew.com)
+
 ## Repos Tracked
 
 rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j
@@ -22,6 +24,7 @@ rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j
   - xrpl.org's `known-amendments.md` (Enabled, Open for Voting, In Development, Obsolete)
 - XLS spec index from XRPL-Standards
 - Blog posts from `xrpl.org/blog` published during the week (release announcements, vulnerability disclosures, etc.)
+- Previous week's report (from `output/`) for week-over-week comparison
 
 ## Setup
 
@@ -47,7 +50,7 @@ The GitHub token needs read access to public repos. The Anthropic key is used fo
 ## Usage
 
 ```bash
-# Current week
+# Current week (Monday to Sunday)
 npm run dev
 
 # Specific past week
@@ -77,8 +80,8 @@ Each run produces two files in `output/`:
 
 ```
 output/
-  2026-02-21_2026-02-28.md          # Summary (markdown)
-  2026-02-21_2026-02-28_input.md    # Full prompt sent to Claude (system + user message)
+  2026-03-02_2026-03-08.md          # Summary (markdown, Monday–Sunday)
+  2026-03-02_2026-03-08_input.md    # Full prompt sent to Claude (system + user message)
 ```
 
 The input file lets you compare exactly what Claude received vs what it produced.
@@ -87,12 +90,15 @@ The `build-pages` script generates styled HTML pages in `site/` from all markdow
 
 ### GitHub Pages (automated)
 
-A GitHub Action (`.github/workflows/weekly-report.yml`) runs every Friday at 21:00 UTC and can also be triggered manually. It generates the report and deploys it to GitHub Pages.
+Two GitHub Actions workflows handle deployment:
+
+- **`weekly-report.yml`** — Runs every Sunday at midnight UTC (and manually via workflow_dispatch). Generates the report, commits the `.md` to the repo, builds HTML pages, and deploys to GitHub Pages.
+- **`deploy-pages.yml`** — Triggers automatically on push to `main` when `output/*.md`, `scripts/build-pages.js`, or `static/` change. Rebuilds and redeploys HTML pages without regenerating reports.
 
 **Setup:**
 1. Add repo secrets: `GH_PAT` (GitHub Personal Access Token) and `ANTHROPIC_API_KEY`
 2. Enable GitHub Pages: Settings → Pages → Source → "GitHub Actions"
-3. The site will be available at `https://<user>.github.io/<repo>/`
+3. (Optional) Configure custom domain in Settings → Pages → Custom domain
 
 ## Caching
 
@@ -100,14 +106,14 @@ All cache files live in `.cache/`:
 
 ```
 .cache/
-  2026-02-21_2026-02-28.json   # Weekly activity data (PRs, issues, discussions, etc.)
+  2026-03-02_2026-03-08.json   # Weekly activity data (PRs, issues, discussions, etc.)
   amendments.json               # Last fetched amendment statuses (debug only)
   xls-specs.json                # Last fetched XLS specs (debug only)
 ```
 
-- **Weekly activity data** is cached by date range. Safe to reuse since past activity is immutable. Use `--no-cache` to force a re-fetch.
+- **Weekly activity data** is cached by date range (Monday–Sunday). Safe to reuse since past activity is immutable. Use `--no-cache` to force a re-fetch.
 - **XLS specs, amendment statuses, and blog posts** are always fetched fresh — they can change between runs.
-- **Previous week data** is loaded from cache automatically for week-over-week comparison.
+- **Previous week's report** is loaded from `output/` (the committed `.md` file) for week-over-week comparison. No extra API calls needed.
 
 ## Cost Optimization
 
@@ -180,4 +186,8 @@ src/
   collector.ts   — GitHub API data collection (GraphQL + REST), amendment/XLS/blog fetching
   summarizer.ts  — Formats data for Claude, manages prompt and API call
   main.ts        — CLI entry point, caching orchestration
+scripts/
+  build-pages.js — Generates styled HTML pages from markdown reports
+static/
+  og-image.png   — Open Graph image for social media previews
 ```
