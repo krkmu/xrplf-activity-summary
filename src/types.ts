@@ -95,6 +95,7 @@ export interface CommitSummary {
 }
 
 export interface RepoActivity {
+  owner: string;
   repo: string;
   mergedPRs: PullRequest[];
   openedPRs: PullRequest[];

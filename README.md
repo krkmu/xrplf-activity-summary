@@ -6,7 +6,7 @@ Published as [XRPL Monday Brew ☕](https://xrplbrew.com)
 
 ## Repos Tracked
 
-rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j
+rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j (all under XRPLF), and [opensource.ripple.com](https://github.com/ripple/opensource.ripple.com) (under ripple — upcoming amendment docs)
 
 ## Data Sources
 
@@ -169,6 +169,28 @@ To adjust, search for the relevant `first:` or `last:` values in the GraphQL que
 - **Concurrency** — Set to 2 parallel repo fetches to avoid 502 errors from GitHub. Configurable via the `CONCURRENCY` constant in `collector.ts`.
 - **Anthropic output limit** — `max_tokens` is set to 10000. Summaries for unusually active weeks may be truncated (a warning is logged if this happens).
 - **Anthropic context window** — Very large weeks with many PRs/issues could approach the model's input limit. The prompt is optimized to minimize token usage (compact amendment context, truncated blog bodies).
+
+## How the Summary is Structured
+
+Each report follows a fixed structure enforced by the prompt:
+
+| Section | What it covers |
+|---|---|
+| **TL;DR** | 1-2 sentences on the week's most significant merged PRs and releases only |
+| **What Merged** | PRs merged during the week, grouped by theme (protocol, SDKs, infra, docs…) |
+| **In Progress** | Notable open PRs and active branches, with review status |
+| **What to Watch Next Week** | Items likely to land or needing attention soon |
+| **Community & Discussions** | Bug reports, feature requests, governance topics |
+| **By the Numbers** | Exact counts (PRs, commits, releases) with week-over-week comparison |
+| **TL;DR for X** | 2-4 short posts (≤280 chars each) for Twitter/X |
+| **Plain English Summary** | 2-3 paragraphs for non-developers, jargon-free |
+
+### Key editorial rules
+
+- **Merged ≠ shipped.** Merging to `develop` does not mean the change is live on the network. Only tagged releases (e.g., rippled 2.4.0) count as "shipped". The prompt enforces this distinction explicitly.
+- **No severity inflation.** Words like "Critical", "Urgent", or "Security" are only used in headings when the PR/issue carries the corresponding label.
+- **No hallucinated URLs.** Claude may only use URLs present in the source data. No constructed or guessed links.
+- **One section per item.** Each PR/issue appears in exactly one section (merged, in progress, or what to watch) to avoid repetition.
 
 ## Disclaimer
 

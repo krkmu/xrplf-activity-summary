@@ -14,7 +14,8 @@ import type {
   WeeklyData,
 } from "./types.js";
 
-const REPOS = [
+const DEFAULT_ORG = "XRPLF";
+const REPOS: { owner: string; name: string }[] = [
   "rippled",
   "xrpl.js",
   "xrpl-py",
@@ -22,8 +23,13 @@ const REPOS = [
   "clio",
   "XRPL-Standards",
   "xrpl4j",
-];
-const ORG = "XRPLF";
+  "ripple/opensource.ripple.com",
+].map((r) => {
+  const parts = r.split("/");
+  return parts.length === 2
+    ? { owner: parts[0], name: parts[1] }
+    : { owner: DEFAULT_ORG, name: r };
+});
 
 function getWeekRange(weeksAgo = 0): { since: string; until: string } {
   const now = new Date();
@@ -336,6 +342,7 @@ function mapDiscussion(node: any): Discussion {
 
 async function fetchActiveBranches(
   token: string,
+  owner: string,
   repo: string,
   since: string,
   until: string,
@@ -347,14 +354,14 @@ async function fetchActiveBranches(
   };
 
   const branchesRes = await fetch(
-    `https://api.github.com/repos/${ORG}/${repo}/branches?per_page=100`,
+    `https://api.github.com/repos/${owner}/${repo}/branches?per_page=100`,
     { headers }
   );
   if (!branchesRes.ok) return [];
   const branches: any[] = await branchesRes.json();
 
   const repoRes = await fetch(
-    `https://api.github.com/repos/${ORG}/${repo}`,
+    `https://api.github.com/repos/${owner}/${repo}`,
     { headers }
   );
   if (!repoRes.ok) return [];
@@ -373,7 +380,7 @@ async function fetchActiveBranches(
       batch.map(async (branch) => {
         try {
           const compareRes = await fetch(
-            `https://api.github.com/repos/${ORG}/${repo}/compare/${encodeURIComponent(defaultBranch)}...${encodeURIComponent(branch.name)}`,
+            `https://api.github.com/repos/${owner}/${repo}/compare/${encodeURIComponent(defaultBranch)}...${encodeURIComponent(branch.name)}`,
             { headers }
           );
           if (!compareRes.ok) return;
@@ -433,15 +440,16 @@ async function retryGql<T>(fn: () => Promise<T>, label: string, maxRetries = 3):
 export async function collectRepoActivity(
   gql: typeof graphql,
   token: string,
+  owner: string,
   repo: string,
   since: string,
   until: string
 ): Promise<RepoActivity> {
-  console.log(`  Collecting ${ORG}/${repo}...`);
+  console.log(`  Collecting ${owner}/${repo}...`);
 
   // First page
   let data: any = await retryGql(
-    () => gql(buildRepoQuery(null, null), { org: ORG, repo, since, until }),
+    () => gql(buildRepoQuery(null, null), { org: owner, repo, since, until }),
     `${repo} main query`
   );
 
@@ -460,7 +468,7 @@ export async function collectRepoActivity(
 
     console.log(`    Paginating merged PRs (page ${paginationRounds + 2})...`);
     const nextData: any = await retryGql(
-      () => gql(buildRepoQuery(mergedPageInfo.endCursor, null), { org: ORG, repo, since, until }),
+      () => gql(buildRepoQuery(mergedPageInfo.endCursor, null), { org: owner, repo, since, until }),
       `${repo} merged PRs page ${paginationRounds + 2}`
     );
     const nextNodes = nextData.repository.mergedPRs?.nodes ?? [];
@@ -483,7 +491,7 @@ export async function collectRepoActivity(
 
     console.log(`    Paginating open issues (page ${paginationRounds + 2})...`);
     const nextData: any = await retryGql(
-      () => gql(buildRepoQuery(null, issuePageInfo.endCursor), { org: ORG, repo, since, until }),
+      () => gql(buildRepoQuery(null, issuePageInfo.endCursor), { org: owner, repo, since, until }),
       `${repo} open issues page ${paginationRounds + 2}`
     );
     const nextNodes = nextData.repository.openIssues?.nodes ?? [];
@@ -496,7 +504,7 @@ export async function collectRepoActivity(
   let discussions: Discussion[] = [];
   try {
     const discData: any = await retryGql(
-      () => gql(DISCUSSIONS_QUERY, { org: ORG, repo }),
+      () => gql(DISCUSSIONS_QUERY, { org: owner, repo }),
       `${repo} discussions`
     );
     discussions = filterByDateRange(
@@ -564,7 +572,7 @@ export async function collectRepoActivity(
   );
   let activeBranches: ActiveBranch[] = [];
   try {
-    activeBranches = await fetchActiveBranches(token, repo, since, until, openPRBranchNames);
+    activeBranches = await fetchActiveBranches(token, owner, repo, since, until, openPRBranchNames);
   } catch (err) {
     console.log(`    Could not fetch branches for ${repo}: ${err instanceof Error ? err.message : err}`);
   }
@@ -577,6 +585,7 @@ export async function collectRepoActivity(
   );
 
   return {
+    owner,
     repo,
     mergedPRs,
     openedPRs,
@@ -626,7 +635,7 @@ export interface AmendmentStatus {
 async function fetchNetworkStatuses(token: string): Promise<Map<string, NetworkStatus>> {
   console.log("Fetching amendment network statuses from known-amendments.md...");
   const res = await fetch(
-    `https://raw.githubusercontent.com/${ORG}/xrpl-dev-portal/master/resources/known-amendments.md`
+    `https://raw.githubusercontent.com/${DEFAULT_ORG}/xrpl-dev-portal/master/resources/known-amendments.md`
   );
   if (!res.ok) {
     console.log("  Could not fetch known-amendments.md");
@@ -667,7 +676,7 @@ export async function fetchAmendmentStatuses(token: string): Promise<AmendmentSt
   // Fetch both sources in parallel
   const [macroRes, networkStatuses] = await Promise.all([
     fetch(
-      `https://api.github.com/repos/${ORG}/rippled/contents/include/xrpl/protocol/detail/features.macro`,
+      `https://api.github.com/repos/${DEFAULT_ORG}/rippled/contents/include/xrpl/protocol/detail/features.macro`,
       { headers }
     ),
     fetchNetworkStatuses(token),
@@ -752,7 +761,7 @@ export async function fetchBlogPosts(token: string, since: string, until: string
 
   for (const year of years) {
     const res = await fetch(
-      `https://api.github.com/repos/${ORG}/xrpl-dev-portal/contents/blog/${year}`,
+      `https://api.github.com/repos/${DEFAULT_ORG}/xrpl-dev-portal/contents/blog/${year}`,
       { headers }
     );
     if (!res.ok) continue;
@@ -766,7 +775,7 @@ export async function fetchBlogPosts(token: string, since: string, until: string
         batch.map(async (file: any) => {
           try {
             const raw = await fetch(
-              `https://raw.githubusercontent.com/${ORG}/xrpl-dev-portal/master/blog/${year}/${file.name}`
+              `https://raw.githubusercontent.com/${DEFAULT_ORG}/xrpl-dev-portal/master/blog/${year}/${file.name}`
             );
             if (!raw.ok) return;
             const content = await raw.text();
@@ -827,7 +836,7 @@ export async function fetchXlsSpecs(token: string): Promise<XlsSpec[]> {
 
   // List all XLS directories
   const res = await fetch(
-    `https://api.github.com/repos/${ORG}/XRPL-Standards/contents`,
+    `https://api.github.com/repos/${DEFAULT_ORG}/XRPL-Standards/contents`,
     { headers }
   );
   if (!res.ok) {
@@ -848,7 +857,7 @@ export async function fetchXlsSpecs(token: string): Promise<XlsSpec[]> {
       batch.map(async (dir: string) => {
         try {
           const readmeRes = await fetch(
-            `https://api.github.com/repos/${ORG}/XRPL-Standards/contents/${dir}/README.md`,
+            `https://api.github.com/repos/${DEFAULT_ORG}/XRPL-Standards/contents/${dir}/README.md`,
             { headers }
           );
           if (!readmeRes.ok) return;
@@ -896,7 +905,7 @@ export async function collectWeeklyData(
 ): Promise<WeeklyData> {
   const { since, until } = getWeekRange(weeksAgo);
 
-  console.log(`Collecting XRPLF activity from ${since.slice(0, 10)} to ${until.slice(0, 10)}`);
+  console.log(`Collecting activity from ${since.slice(0, 10)} to ${until.slice(0, 10)}`);
 
   const gql = graphql.defaults({
     headers: { authorization: `token ${token}` },
@@ -908,7 +917,7 @@ export async function collectWeeklyData(
   for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
     const batch = REPOS.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(
-      batch.map((repo) => collectRepoActivity(gql, token, repo, since, until))
+      batch.map((r) => collectRepoActivity(gql, token, r.owner, r.name, since, until))
     );
     for (const result of results) {
       if (result.status === "fulfilled") {

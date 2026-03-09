@@ -71,7 +71,7 @@ function buildRepoSection(repo: RepoActivity): string {
   if (repo.activeBranches.length > 0) {
     parts.push("\n### Active Branches (no PR yet)");
     for (const b of repo.activeBranches) {
-      const branchUrl = `https://github.com/XRPLF/${repo.repo}/tree/${encodeURIComponent(b.name)}`;
+      const branchUrl = `https://github.com/${repo.owner}/${repo.repo}/tree/${encodeURIComponent(b.name)}`;
       parts.push(
         `- **${b.name}** by @${b.author} — "${b.lastCommitMessage}" (${b.lastCommitDate.slice(0, 10)}, ${b.aheadBy} commits ahead) ${branchUrl}`
       );
@@ -158,11 +158,11 @@ Audience: XRPL validators, developers, and non-technical community members.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
 - Use labels to flag important items: "security", "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
 - Use discussion data to surface community conversations, feature proposals, and governance topics
-- If a "Previous Week Report" is provided, you MUST compare it with the current week in "By the Numbers" — show changes in PR/commit counts (↑/↓/flat), note items that were "In Progress" last week and shipped this week, and highlight new trends
+- If a "Previous Week Report" is provided, you MUST compare it with the current week in "By the Numbers" — show changes in PR/commit counts (↑/↓/flat), note items that were "In Progress" last week and merged this week, and highlight new trends
 - Only facts from the data. No speculation, no assumptions, no filler on quiet weeks.
 - Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance — do not infer severity beyond what the labels and body state. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability. NEVER use words like "Critical", "Urgent", "Emergency", or "Security" in section titles or headings unless the PR/issue has the corresponding label. A bug fix is a bug fix, not a "Critical Fix".
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
-- Do not repeat the same PR/issue across multiple sections. Each item belongs in ONE section: shipped (merged), in progress (open), or what to watch. Reference by link if needed elsewhere.
+- Do not repeat the same PR/issue across multiple sections. Each item belongs in ONE section: merged, in progress (open), or what to watch. Reference by link if needed elsewhere.
 
 **Contributors:**
 - Only flag someone as a new contributor if their authorAssociation is exactly FIRST_TIME_CONTRIBUTOR. Never guess.
@@ -180,10 +180,11 @@ Audience: XRPL validators, developers, and non-technical community members.
 # XRPL Developments Weekly Summary: {date_range}
 
 ## TL;DR
-1-2 sentences summarizing the week's key shipped developments. Cover the 2-3 most significant merged items across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work.
+1-2 sentences summarizing the week's key developments. Cover the 2-3 most significant merged items and releases across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work.
 
-## What Shipped
+## What Merged
 Grouped by theme. Each item: what changed, why it matters, link.
+IMPORTANT: Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases (e.g., rippled 3.1.1) represent code that has actually shipped to production. Make this distinction clear — say "merged to develop" for PRs, and only say "released" or "shipped" when there is an actual release in the data.
 
 ## In Progress
 Notable open PRs and active branches. Mention review status (approved, changes requested, draft) when available.
@@ -205,7 +206,8 @@ A thread of 2-4 short posts (each max 280 chars). First post hooks the reader wi
 2-3 paragraphs for non-developers. Conversational tone, no jargon. For each key change, explain:
 1. What changed (translate technical terms)
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
-3. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
+3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. (e.g., "wallets can now auto-detect new transaction types without manual updates", "developers can build lending products on XRPL for the first time")
+4. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
 End with links from the data only (release pages, blog posts, relevant PRs). You may also mention @XRPLF and @RippleXDev on X for ongoing updates.
 
 ---
