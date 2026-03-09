@@ -151,7 +151,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 
 **Content:**
 - Unconfirmed bugs, open issues, and unmerged PRs are never headline material — they belong in "What to Watch" or "Community".
-- Group by theme (protocol, performance, security, SDKs, docs, infra) — not by repo
+- Group by theme (protocol, performance, security, SDKs, docs, infra) — not by repo. Always name the repo in each item so the reader knows which codebase is affected.
 - For protocol/amendment changes: explain network impact in plain terms, flag action needed by validators/operators
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Use the Amendment Lifecycle Status to report accurate statuses. Don't present already-known statuses as news unless they changed THIS week.
@@ -180,17 +180,17 @@ Audience: XRPL validators, developers, and non-technical community members.
 # XRPL Developments Weekly Summary: {date_range}
 
 ## TL;DR
-1-2 sentences summarizing the week's key developments. Cover the 2-3 most significant merged items and releases across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work.
+1-2 sentences summarizing the week's key developments. Cover the 2-3 most significant merged items and releases across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work. Always name the repo (e.g., "in rippled", "in xrpl-py") so readers know which codebase is affected.
 
 ## What Merged
 Grouped by theme. Each item: what changed, why it matters, link.
-IMPORTANT: Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases (e.g., rippled 3.1.1) represent code that has actually shipped to production. Make this distinction clear — say "merged to develop" for PRs, and only say "released" or "shipped" when there is an actual release in the data.
+IMPORTANT: Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases (e.g., rippled 3.1.1) represent code that has actually shipped to production. Make this distinction clear — say "merged to develop" or "merged to main" depending on the target branch, and only say "released" or "shipped" when there is an actual release in the data. For rippled specifically, develop is the active development branch and main tracks releases.
 
 ## In Progress
-Notable open PRs and active branches. Mention review status (approved, changes requested, draft) when available.
+Notable open PRs and active branches. Always name the repo. Mention review status (approved, changes requested, draft) when available. Distinguish draft PRs (early/exploratory) from PRs in active review (closer to landing). If a reviewer is from the core team vs. an external contributor, note it when it signals readiness.
 
 ## What to Watch Next Week
-2-4 bullet points of items likely to land, need attention, or worth following. Based only on open PRs nearing merge, active branches with significant work, ongoing discussions, or announced timelines from the data. No speculation.
+2-4 bullet points of items likely to land, need attention, or worth following. For each item, explain WHY it's worth watching: is it close to merging (approved, no outstanding changes)? Does it have operator/validator impact? Is it blocking other work? Based only on open PRs nearing merge, active branches with significant work, ongoing discussions, or announced timelines from the data. No speculation.
 
 ## Community & Discussions
 Issues, discussions, external contributors.
@@ -203,7 +203,7 @@ Exact integer counts for repos, PRs merged, PRs opened, releases, contributors, 
 A thread of 2-4 short posts (each max 280 chars). First post hooks the reader with the headline. Following posts cover the other key developments of the week. No hashtags. Informative, not hype. End the thread with a call to action — link to a relevant repo, PR, release, or doc page ONLY if the URL is in the data. You can also reference @XRPLF (foundation) and @RippleXDev (developer updates).
 
 ## Plain English Summary
-2-3 paragraphs for non-developers. Conversational tone, no jargon. For each key change, explain:
+2-3 paragraphs for non-developers. Conversational tone, no jargon. When mentioning a project, always give the full name first then the repo (e.g., "the Python SDK (xrpl-py)", "the API server Clio"). For each key change, explain:
 1. What changed (translate technical terms)
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
 3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. (e.g., "wallets can now auto-detect new transaction types without manual updates", "developers can build lending products on XRPL for the first time")
