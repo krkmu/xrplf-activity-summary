@@ -180,7 +180,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 # XRPL Developments Weekly Summary: {date_range}
 
 ## TL;DR
-1-2 sentences summarizing the week's key developments. Cover the 2-3 most significant merged items and releases across all repos. Do not focus on a single item. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work. Always name the repo (e.g., "in rippled", "in xrpl-py") so readers know which codebase is affected.
+1-3 sentences summarizing the week's key developments. Cover the 2-4 most significant merged items and releases across all repos — not just rippled. Actively look for major changes in every repo (client libraries, docs/portal, Clio, standards) and include them if they are significant. A large docs restructure or a new SDK feature matters as much as a protocol change. Do not focus on a single repo. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work. Always name the repo (e.g., "in rippled", "in xrpl-py", "on the developer portal") so readers know which codebase is affected.
 
 ## What Merged
 Grouped by theme. Each item: what changed, why it matters, link.
@@ -208,7 +208,7 @@ A thread of 2-4 short posts (each max 280 chars). First post hooks the reader wi
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
 3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. (e.g., "wallets can now auto-detect new transaction types without manual updates", "developers can build lending products on XRPL for the first time")
 4. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
-End with links from the data only (release pages, blog posts, relevant PRs). You may also mention @XRPLF and @RippleXDev on X for ongoing updates.
+End with a separate closing line (its own paragraph) linking to relevant sources from the data and/or mentioning @XRPLF and @RippleXDev on X for ongoing updates. This line must be separated from the previous paragraph by a blank line.
 
 ---
 *Summary AI-generated from GitHub activity data. All links sourced from GitHub and xrpl.org.*`;

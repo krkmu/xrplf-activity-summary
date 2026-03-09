@@ -6,3 +6,4 @@ output/test*.md
 .cache/
 site/
 .claude/
+output/prev/
