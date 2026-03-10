@@ -13,23 +13,7 @@ import type {
   CommitSummary,
   WeeklyData,
 } from "./types.js";
-
-const DEFAULT_ORG = "XRPLF";
-const REPOS: { owner: string; name: string }[] = [
-  "rippled",
-  "xrpl.js",
-  "xrpl-py",
-  "xrpl-dev-portal",
-  "clio",
-  "XRPL-Standards",
-  "xrpl4j",
-  "ripple/opensource.ripple.com",
-].map((r) => {
-  const parts = r.split("/");
-  return parts.length === 2
-    ? { owner: parts[0], name: parts[1] }
-    : { owner: DEFAULT_ORG, name: r };
-});
+import { DEFAULT_ORG, REPOS, CONCURRENCY } from "./config.js";
 
 function getWeekRange(weeksAgo = 0): { since: string; until: string } {
   const now = new Date();
@@ -911,9 +895,8 @@ export async function collectWeeklyData(
     headers: { authorization: `token ${token}` },
   });
 
-  // Collect repos in parallel, 2 at a time to stay within GitHub GraphQL node limits
+  // Collect repos in parallel, limited to stay within GitHub GraphQL node limits
   const repos: RepoActivity[] = [];
-  const CONCURRENCY = 2;
   for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
     const batch = REPOS.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(

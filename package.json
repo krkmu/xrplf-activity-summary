@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "dev": "tsx src/main.ts"
+    "dev": "tsx src/main.ts",
+    "daily": "tsx src/daily.ts",
+    "daily:build": "node dist/daily.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

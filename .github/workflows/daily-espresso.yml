@@ -1,13 +1,13 @@
-name: Weekly Report
+name: Daily Espresso
 
 on:
   schedule:
-    # Every Sunday at midnight UTC
-    - cron: '0 0 * * 0'
+    # Tuesday through Friday at 1:00 UTC
+    - cron: '0 1 * * 2-5'
   workflow_dispatch:
     inputs:
-      weeks_ago:
-        description: 'Weeks ago (0 = current week)'
+      days_ago:
+        description: 'Days ago (0 = today)'
         required: false
         default: '0'
 
@@ -33,30 +33,22 @@ jobs:
 
       - run: npm ci
 
-      - name: Generate report
+      - name: Generate daily espresso
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          WEEKS_AGO="${{ github.event.inputs.weeks_ago || '0' }}"
+          DAYS_AGO="${{ github.event.inputs.days_ago || '0' }}"
           npm run build
-          node dist/main.js --weeks-ago="$WEEKS_AGO"
+          node dist/daily.js --days-ago="$DAYS_AGO"
 
-      - name: Clean previous week's espressos
-        run: |
-          if [ -d output/daily ] && ls output/daily/*.md 1>/dev/null 2>&1; then
-            rm -f output/daily/*.md
-            echo "Cleaned daily espressos"
-          fi
-
-      - name: Commit report to repo
+      - name: Commit espresso to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add --ignore-errors output/*.md || true
-          git rm --cached output/daily/*.md 2>/dev/null || true
-          git reset output/*_input.md output/test*.md 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Add weekly report $(date +%Y-%m-%d)"
+          git add output/daily/*.md || true
+          git reset output/daily/*_input.md 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Add daily espresso $(date +%Y-%m-%d)"
           git push
 
       - name: Build HTML pages

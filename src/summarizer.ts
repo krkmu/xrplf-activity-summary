@@ -211,7 +211,7 @@ A thread of 2-4 short posts (each max 280 chars). First post hooks the reader wi
 End with a separate closing line (its own paragraph) linking to relevant sources from the data and/or mentioning @XRPLF and @RippleXDev on X for ongoing updates. This line must be separated from the previous paragraph by a blank line.
 
 ---
-*Summary AI-generated from GitHub activity data. All links sourced from GitHub and xrpl.org.*`;
+*Summary AI-generated from GitHub activity data. This report covers PRs, issues, and discussions captured via the GitHub API — activity on development and test branches without associated PRs may not be reflected. Check the [XRPLF repos](https://github.com/XRPLF) directly for full activity. All links sourced from GitHub and xrpl.org.*`;
 
 async function callClaudeWithRetry(
   client: Anthropic,
@@ -271,7 +271,7 @@ async function callClaudeWithRetry(
   throw new Error("Exhausted retries");
 }
 
-function buildAmendmentContext(amendments: AmendmentStatus[]): string {
+export function buildAmendmentContext(amendments: AmendmentStatus[]): string {
   if (amendments.length === 0) return "";
 
   const enabled = amendments.filter((a) => a.networkStatus === "Enabled");
@@ -300,7 +300,7 @@ function buildAmendmentContext(amendments: AmendmentStatus[]): string {
   return lines.join("\n");
 }
 
-function buildXlsContext(specs: XlsSpec[]): string {
+export function buildXlsContext(specs: XlsSpec[]): string {
   if (specs.length === 0) return "";
   const lines = [
     "## XRPL Standards Reference (XLS Specs)",

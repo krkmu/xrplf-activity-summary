@@ -1,7 +1,8 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "fs";
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from "fs";
 import { join } from "path";
 
 const OUTPUT_DIR = join(import.meta.dirname, "..", "output");
+const DAILY_DIR = join(OUTPUT_DIR, "daily");
 const SITE_DIR = join(import.meta.dirname, "..", "site");
 
 mkdirSync(SITE_DIR, { recursive: true });
@@ -149,6 +150,10 @@ function buildPage(title, body) {
   .index-intro { text-align: center; color: var(--muted); max-width: 600px; margin: 0 auto; }
   .index-intro p { margin: 0.6rem 0; }
   .index-desc { font-size: 0.95em; line-height: 1.7; margin-top: 1.2rem; color: var(--fg); text-align: justify; }
+  .report-list:not(.espresso-list) a { border-left: 3px solid var(--accent); }
+  .espresso-list a { border-left: 3px solid #d4a574; }
+  .espresso-list a:hover { border-left-color: #e8c49a; }
+  .espresso-placeholder { color: var(--muted); font-style: italic; text-align: center; padding: 1.5rem; }
   @media (max-width: 600px) { body { padding: 1rem; font-size: 15px; } h1 { font-size: 1.5rem; } h2 { font-size: 1.2rem; } .tldr { padding: 1rem; } }
 </style>
 </head>
@@ -164,29 +169,68 @@ ${body}
 </html>`;
 }
 
-// Build individual report pages
+// Build individual weekly report pages
 const reportLinks = [];
 for (const file of summaries) {
   const md = readFileSync(join(OUTPUT_DIR, file), "utf-8");
   const slug = file.replace(".md", "");
   const html = markdownToHtml(md);
-  // Extract generation metadata from HTML comment
   const metaMatch = md.match(/<!-- generated: (.+?) \| model: (.+?) -->/);
   const genDate = metaMatch ? new Date(metaMatch[1]).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : null;
   const genModel = metaMatch ? metaMatch[2] : null;
   const genInfo = genDate ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
   const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
-  // Remove trailing double <hr> before gen-info
   const trimmedHtml = genInfo ? html.replace(/(<hr>\s*(<p>.*?<\/p>\s*)?){2,}$/, "") : html;
   const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + trimmedHtml + genInfo);
   writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
-  // Format date range: "Feb 28 – Mar 7, 2026"
   const [start, end] = slug.split("_");
   const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const year = end.slice(0, 4);
   const dateLabel = `${fmt(start)} – ${fmt(end)}, ${year}`;
   reportLinks.push({ slug, file, dateLabel });
   console.log(`  Built ${slug}.html`);
+}
+
+// Build daily espresso pages
+const espressoLinks = [];
+if (existsSync(DAILY_DIR)) {
+  const dailyFiles = readdirSync(DAILY_DIR)
+    .filter((f) => f.endsWith(".md") && !f.includes("_input"))
+    .sort()
+    .reverse();
+
+  for (const file of dailyFiles) {
+    const md = readFileSync(join(DAILY_DIR, file), "utf-8");
+    const slug = `espresso-${file.replace(".md", "")}`;
+    const html = markdownToHtml(md);
+    const metaMatch = md.match(/<!-- generated: (.+?) \| model: (.+?) -->/);
+    const genDate = metaMatch ? new Date(metaMatch[1]).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : null;
+    const genModel = metaMatch && metaMatch[2] !== "none" ? metaMatch[2] : null;
+    const genInfo = genDate && genModel ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
+    const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
+    const page = buildPage(`Daily Espresso ☕ — ${file.replace(".md", "")}`, nav + html + genInfo);
+    writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
+    const date = file.replace(".md", "");
+    const dayLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+    espressoLinks.push({ slug, date, dayLabel });
+    console.log(`  Built ${slug}.html`);
+  }
+}
+
+// Build espresso section HTML
+const latestWeeklyDate = reportLinks.length > 0 ? reportLinks[0].slug.split("_")[1] : null;
+let espressoSection = "";
+if (espressoLinks.length > 0) {
+  espressoSection = `
+<h2>Daily Espresso ☕</h2>
+<p style="color: var(--muted); margin-bottom: 1rem;">Quick daily digests — Tuesday through Friday, between each weekly brew.</p>
+<ul class="report-list espresso-list">
+${espressoLinks.map((e) => `<li><a href="${e.slug}.html">${e.dayLabel}</a></li>`).join("\n")}
+</ul>`;
+} else if (latestWeeklyDate) {
+  espressoSection = `
+<h2>Daily Espresso ☕</h2>
+<p class="espresso-placeholder">The weekly brew is fresh — espresso service resumes Tuesday. ☕</p>`;
 }
 
 // Build index page
@@ -197,9 +241,12 @@ const indexBody = `
 <p class="index-desc">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
 </div>
 <hr>
+${espressoSection}
+${espressoLinks.length > 0 ? "<hr>" : ""}
+<h2>Weekly Brews</h2>
 <ul class="report-list">
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.dateLabel}</a></li>`).join("\n")}
 </ul>
 `;
 writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPL Monday Brew ☕", indexBody), "utf-8");
-console.log(`  Built index.html (${reportLinks.length} reports)`);
+console.log(`  Built index.html (${reportLinks.length} weekly, ${espressoLinks.length} daily)`);
