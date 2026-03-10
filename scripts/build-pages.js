@@ -101,7 +101,7 @@ function buildPage(title, body) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
-<meta name="description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization. What shipped, what's in progress, and what to watch.">
+<meta name="description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization. What merged, what's in progress, and what to watch.">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization.">
 <meta property="og:type" content="website">
@@ -109,62 +109,272 @@ function buildPage(title, body) {
 <meta property="og:url" content="https://xrplbrew.com">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${title}">
-<meta name="twitter:description" content="Weekly AI-generated summaries of XRPLF GitHub activity. What shipped, what's in progress, and what to watch.">
+<meta name="twitter:description" content="Weekly AI-generated summaries of XRPLF GitHub activity. What merged, what's in progress, and what to watch.">
 <meta name="twitter:image" content="https://xrplbrew.com/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #0d1117; --fg: #c9d1d9; --fg-bright: #e6edf3; --muted: #8b949e; --accent: #58a6ff; --border: #21262d; --card: #161b22; --card-hover: #1c2128; }
+  :root {
+    --bg: #09090b;
+    --bg-subtle: #0f0f12;
+    --fg: #c8c8d0;
+    --fg-bright: #fafafa;
+    --muted: #71717a;
+    --accent: #c4a882;
+    --accent-dim: rgba(196, 168, 130, 0.12);
+    --accent-blue: #60a5fa;
+    --border: #1c1c22;
+    --border-hover: #2a2a33;
+    --card: #111114;
+    --card-hover: #16161a;
+    --radius: 10px;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.8; padding: 2rem 1.5rem; max-width: 780px; margin: 0 auto; font-size: 16px; -webkit-font-smoothing: antialiased; }
-  h1 { font-size: 1.8rem; color: var(--fg-bright); margin: 2.5rem 0 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); letter-spacing: -0.02em; }
-  h1 .date-subtitle { display: block; font-size: 1.15rem; font-weight: 400; color: var(--accent); margin-top: 0.3rem; }
-  h1.site-title { font-size: 2.4rem; text-align: center; border: none; padding-bottom: 0; margin-bottom: 0.3rem; }
-  h2 { font-size: 1.35rem; color: var(--accent); margin: 2.5rem 0 0.8rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); letter-spacing: -0.01em; }
-  h3 { font-size: 1.1rem; color: var(--fg-bright); margin: 1.8rem 0 0.5rem; }
-  h4 { font-size: 1rem; color: var(--fg-bright); margin: 1.4rem 0 0.4rem; }
-  p { margin: 0.8rem 0; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  strong { color: var(--fg-bright); }
-  code { background: var(--card); padding: 0.15rem 0.45rem; border-radius: 4px; font-size: 0.88em; border: 1px solid var(--border); }
-  ul, ol { padding-left: 1.5rem; margin: 0.8rem 0; }
-  li { margin: 0.5rem 0; line-height: 1.7; }
-  li p { margin: 0.3rem 0; }
-  table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: 0.92em; }
-  td { padding: 0.5rem 1rem; border: 1px solid var(--border); }
-  tr:first-child td { font-weight: 600; color: var(--fg-bright); background: var(--card); }
-  tr:nth-child(even) { background: rgba(22, 27, 34, 0.5); }
-  blockquote { border-left: 3px solid var(--accent); padding: 0.6rem 1rem; color: var(--muted); margin: 1rem 0; background: rgba(22, 27, 34, 0.4); border-radius: 0 6px 6px 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    padding: 3rem 1.5rem;
+    max-width: 740px;
+    margin: 0 auto;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Fade-in animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: fadeUp 0.5s ease-out both; }
+
+  /* Typography */
+  h1 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: var(--fg-bright);
+    margin: 2.5rem 0 0.8rem;
+    padding-bottom: 0.6rem;
+    letter-spacing: -0.035em;
+    border-bottom: none;
+  }
+  h1 .date-subtitle {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--accent);
+    margin-top: 0.4rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  h1.site-title {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.04em;
+  }
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--fg-bright);
+    margin: 2.8rem 0 0.7rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: -0.02em;
+  }
+  h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--fg-bright);
+    margin: 2rem 0 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.82rem;
+  }
+  h4 { font-size: 0.92rem; font-weight: 600; color: var(--fg-bright); margin: 1.4rem 0 0.3rem; }
+  p { margin: 0.7rem 0; }
+
+  /* Links */
+  a { color: var(--accent); text-decoration: none; transition: color 0.15s ease; }
+  a:hover { color: var(--fg-bright); }
+
+  strong { color: var(--fg-bright); font-weight: 600; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--card);
+    padding: 0.15rem 0.4rem;
+    border-radius: 5px;
+    font-size: 0.82em;
+    border: 1px solid var(--border);
+    color: var(--accent);
+  }
+
+  /* Lists */
+  ul, ol { padding-left: 1.3rem; margin: 0.7rem 0; }
+  li { margin: 0.45rem 0; line-height: 1.7; }
+  li p { margin: 0.2rem 0; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 1.2rem 0; font-size: 0.88em; }
+  td { padding: 0.55rem 0.9rem; border: 1px solid var(--border); }
+  tr:first-child td { font-weight: 600; color: var(--fg-bright); background: var(--card); font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:nth-child(even) { background: var(--bg-subtle); }
+
+  blockquote {
+    border-left: 2px solid var(--accent);
+    padding: 0.5rem 1rem;
+    color: var(--muted);
+    margin: 1rem 0;
+    background: var(--accent-dim);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 0.93em;
+  }
+
   hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
-  .nav { margin-bottom: 2rem; font-size: 0.9rem; }
-  .nav a { color: var(--muted); transition: color 0.2s; }
-  .nav a:hover { color: var(--accent); text-decoration: none; }
-  .tldr { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1.2rem 0; font-size: 1.05em; line-height: 1.7; }
-  .section-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem 1.5rem; margin: 1rem 0; }
-  .gen-info { margin-top: 2.5rem; padding: 0.8rem 1rem; font-size: 0.82rem; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; text-align: center; font-style: italic; }
-  footer { margin-top: 4rem; color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--border); padding-top: 1.2rem; text-align: center; line-height: 1.6; }
+
+  /* Navigation */
+  .nav { margin-bottom: 2.5rem; font-size: 0.85rem; }
+  .nav a { color: var(--fg); transition: color 0.2s; }
+  .nav a:hover { color: var(--accent); }
+
+  /* Cards */
+  .tldr {
+    background: var(--accent-dim);
+    border: 1px solid rgba(196, 168, 130, 0.18);
+    border-radius: var(--radius);
+    padding: 1.3rem 1.5rem;
+    margin: 1.2rem 0;
+    font-size: 1em;
+    line-height: 1.75;
+    color: var(--fg-bright);
+  }
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.3rem 1.5rem;
+    margin: 1rem 0;
+  }
+
+  /* Gen info */
+  .gen-info {
+    margin-top: 2.5rem;
+    padding: 0.7rem 1rem;
+    font-size: 0.78rem;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 4rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+    text-align: center;
+    line-height: 1.7;
+  }
+  footer { color: var(--fg); }
+  footer a { color: var(--accent); }
+  footer a:hover { color: var(--accent); }
+
+  /* Report lists */
   .report-list { list-style: none; padding: 0; }
-  .report-list li { margin: 0.6rem 0; }
-  .report-list a { display: block; border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.3rem; background: var(--card); transition: border-color 0.2s, background 0.2s; font-size: 1.05em; }
-  .report-list a:hover { border-color: var(--accent); background: var(--card-hover); text-decoration: none; }
-  .index-intro { text-align: center; color: var(--muted); max-width: 600px; margin: 0 auto; }
-  .index-intro p { margin: 0.6rem 0; }
-  .index-desc { font-size: 0.95em; line-height: 1.7; margin-top: 1.2rem; color: var(--fg); text-align: justify; }
-  .report-list:not(.espresso-list) a { border-left: 3px solid var(--accent); }
-  .espresso-list a { border-left: 3px solid #d4a574; }
-  .espresso-list a:hover { border-left-color: #e8c49a; }
-  .espresso-placeholder { color: var(--muted); font-style: italic; text-align: center; padding: 1.5rem; }
-  @media (max-width: 600px) { body { padding: 1rem; font-size: 15px; } h1 { font-size: 1.5rem; } h2 { font-size: 1.2rem; } .tldr { padding: 1rem; } }
+  .report-list li { margin: 0.5rem 0; }
+  .report-list a {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1.2rem;
+    background: var(--card);
+    transition: all 0.2s ease;
+    font-size: 0.95em;
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .report-list a:hover {
+    border-color: var(--border-hover);
+    background: var(--card-hover);
+    color: var(--fg-bright);
+    transform: translateX(3px);
+  }
+  .report-list a::before {
+    margin-right: 0.7rem;
+    font-size: 0.75em;
+    opacity: 0.5;
+  }
+  .report-list:not(.espresso-list) a { border-left: 2px solid var(--accent-blue); }
+  .report-list:not(.espresso-list) a:hover { border-left-color: var(--fg-bright); }
+  .report-list:not(.espresso-list) a::before { content: "\\2192"; color: var(--accent-blue); }
+
+  .espresso-list a { border-left: 2px solid var(--accent); }
+  .espresso-list a:hover { border-left-color: var(--fg-bright); }
+  .espresso-list a::before { content: "\\2192"; color: var(--accent); }
+
+  .espresso-placeholder {
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.9em;
+  }
+
+  /* Index page */
+  .index-intro { text-align: center; max-width: 560px; margin: 0 auto; }
+  .index-intro > p:first-child { color: var(--fg); font-size: 1.05em; line-height: 1.6; }
+  .index-desc {
+    font-size: 0.88em;
+    line-height: 1.75;
+    margin-top: 1.2rem;
+    color: var(--fg);
+    text-align: center;
+  }
+
+  /* Section labels */
+  .section-label {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg);
+    margin-bottom: 0.8rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    body { padding: 1.5rem 1rem; font-size: 14px; }
+    h1 { font-size: 1.4rem; }
+    h1.site-title { font-size: 1.7rem; }
+    h2 { font-size: 1.05rem; }
+    .tldr { padding: 1rem; }
+    .report-list a { padding: 0.75rem 1rem; }
+  }
 </style>
 </head>
 <body>
 ${body}
 <footer>
-<p><strong>XRPL Monday Brew ☕</strong></p>
-<p>AI-generated from reports <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos using Claude &middot; Built by <a href="https://x.com/krkmu_">krkmu</a></p>
-<p style="margin-top: 0.8rem; font-style: italic; opacity: 0.75;">Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts beyond what the source data supports. Always verify claims against the linked PRs, issues, and official sources before acting on them.</p>
+<p><strong style="color: var(--fg-bright); font-weight: 600;">XRPL Monday Brew ☕</strong></p>
+<p style="margin-top: 0.4rem;">AI-generated from <a href="https://github.com/XRPLF">XRPLF GitHub</a> repos using Claude &middot; Built by <a href="https://x.com/krkmu_">krkmu</a></p>
+<p style="margin-top: 0.8rem; font-style: italic; opacity: 0.7; font-size: 0.72rem;">Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or amplify facts. Always verify against the linked PRs, issues, and official sources.</p>
 </footer>
 <script data-goatcounter="https://xrplbrew.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script>
+document.querySelectorAll('.animate-in').forEach((el, i) => { el.style.animationDelay = i * 0.08 + 's'; });
+</script>
 </body>
 </html>`;
 }
@@ -179,9 +389,9 @@ for (const file of summaries) {
   const genDate = metaMatch ? new Date(metaMatch[1]).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : null;
   const genModel = metaMatch ? metaMatch[2] : null;
   const genInfo = genDate ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
-  const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
+  const nav = `<div class="nav"><a href="index.html">&larr; All reports</a></div>`;
   const trimmedHtml = genInfo ? html.replace(/(<hr>\s*(<p>.*?<\/p>\s*)?){2,}$/, "") : html;
-  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, nav + trimmedHtml + genInfo);
+  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, `<div class="animate-in">${nav}${trimmedHtml}${genInfo}</div>`);
   writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
   const [start, end] = slug.split("_");
   const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -207,8 +417,8 @@ if (existsSync(DAILY_DIR)) {
     const genDate = metaMatch ? new Date(metaMatch[1]).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : null;
     const genModel = metaMatch && metaMatch[2] !== "none" ? metaMatch[2] : null;
     const genInfo = genDate && genModel ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
-    const nav = `<div class="nav"><a href="index.html">&larr; All Reports</a></div>`;
-    const page = buildPage(`Daily Espresso ☕ — ${file.replace(".md", "")}`, nav + html + genInfo);
+    const nav = `<div class="nav"><a href="index.html">&larr; All reports</a></div>`;
+    const page = buildPage(`Daily Espresso ☕ — ${file.replace(".md", "")}`, `<div class="animate-in">${nav}${html}${genInfo}</div>`);
     writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
     const date = file.replace(".md", "");
     const dayLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
@@ -222,31 +432,39 @@ const latestWeeklyDate = reportLinks.length > 0 ? reportLinks[0].slug.split("_")
 let espressoSection = "";
 if (espressoLinks.length > 0) {
   espressoSection = `
-<h2>Daily Espresso ☕</h2>
-<p style="color: var(--muted); margin-bottom: 1rem;">Quick daily digests — Tuesday through Friday, between each weekly brew.</p>
+<div class="animate-in">
+<p class="section-label">Daily Espresso</p>
+<p style="color: var(--fg); margin-bottom: 1rem; font-size: 0.88em;">Quick daily digests — Tuesday through Friday, between each weekly brew.</p>
 <ul class="report-list espresso-list">
 ${espressoLinks.map((e) => `<li><a href="${e.slug}.html">${e.dayLabel}</a></li>`).join("\n")}
-</ul>`;
+</ul>
+</div>`;
 } else if (latestWeeklyDate) {
   espressoSection = `
-<h2>Daily Espresso ☕</h2>
-<p class="espresso-placeholder">The weekly brew is fresh — espresso service resumes Tuesday. ☕</p>`;
+<div class="animate-in">
+<p class="section-label">Daily Espresso</p>
+<p class="espresso-placeholder">The weekly brew is fresh — espresso service resumes Tuesday.</p>
+</div>`;
 }
 
 // Build index page
 const indexBody = `
+<div class="animate-in">
 <h1 class="site-title">XRPL Monday Brew ☕</h1>
 <div class="index-intro">
-<p>Latest XRPL development news — AI-generated summaries of GitHub activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
-<p class="index-desc">Ever wondered what's actually happening under the hood of XRPL? Who's merging what, which amendments are moving, what the core devs are cooking up? Grab your Monday coffee and catch up on a week's worth of development — no deep GitHub diving required. Whether you're a validator operator, a builder, or just crypto-curious, each brew breaks it down so you don't have to.</p>
+<p>AI-generated summaries of development activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
+<p class="index-desc">What's merging, which amendments are moving, what the core devs are building. Weekly deep-dives on Mondays, quick espresso shots Tuesday through Friday. No GitHub diving required.</p>
+</div>
 </div>
 <hr>
 ${espressoSection}
 ${espressoLinks.length > 0 ? "<hr>" : ""}
-<h2>Weekly Brews</h2>
+<div class="animate-in">
+<p class="section-label">Weekly Brews</p>
 <ul class="report-list">
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.dateLabel}</a></li>`).join("\n")}
 </ul>
+</div>
 `;
 writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPL Monday Brew ☕", indexBody), "utf-8");
 console.log(`  Built index.html (${reportLinks.length} weekly, ${espressoLinks.length} daily)`);
