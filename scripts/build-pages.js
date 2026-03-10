@@ -345,11 +345,11 @@ function buildPage(title, body) {
   /* Section labels */
   .section-label {
     display: inline-block;
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--fg);
+    letter-spacing: 0.06em;
+    color: var(--fg-bright);
     margin-bottom: 0.8rem;
   }
 
