@@ -94,23 +94,29 @@ function markdownToHtml(md) {
   return html;
 }
 
-function buildPage(title, body) {
+function buildPage(title, body, { slug = "", description = "" } = {}) {
+  const baseUrl = "https://xrplbrew.com";
+  const pageUrl = slug ? `${baseUrl}/${slug}.html` : baseUrl;
+  const desc = description || "AI-generated summaries of XRPL Ledger (XRPLF) GitHub activity — weekly deep-dives and daily espresso digests. What merged, what's in progress, and what to watch.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${title}</title>
-<meta name="description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization. What merged, what's in progress, and what to watch.">
+<meta name="description" content="${desc}">
+<link rel="canonical" href="${pageUrl}">
 <meta property="og:title" content="${title}">
-<meta property="og:description" content="Weekly AI-generated summaries of GitHub activity across the XRPL Ledger (XRPLF) organization.">
-<meta property="og:type" content="website">
-<meta property="og:image" content="https://xrplbrew.com/og-image.png">
-<meta property="og:url" content="https://xrplbrew.com">
+<meta property="og:description" content="${desc}">
+<meta property="og:type" content="${slug ? "article" : "website"}">
+<meta property="og:image" content="${baseUrl}/og-image.png">
+<meta property="og:url" content="${pageUrl}">
+<meta property="og:site_name" content="XRPL Monday Brew">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@krkmu_">
 <meta name="twitter:title" content="${title}">
-<meta name="twitter:description" content="Weekly AI-generated summaries of XRPLF GitHub activity. What merged, what's in progress, and what to watch.">
-<meta name="twitter:image" content="https://xrplbrew.com/og-image.png">
+<meta name="twitter:description" content="${desc}">
+<meta name="twitter:image" content="${baseUrl}/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -391,12 +397,13 @@ for (const file of summaries) {
   const genInfo = genDate ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
   const nav = `<div class="nav"><a href="index.html">&larr; All reports</a></div>`;
   const trimmedHtml = genInfo ? html.replace(/(<hr>\s*(<p>.*?<\/p>\s*)?){2,}$/, "") : html;
-  const page = buildPage(`XRPL Monday Brew ☕ — ${slug}`, `<div class="animate-in">${nav}${trimmedHtml}${genInfo}</div>`);
-  writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
   const [start, end] = slug.split("_");
   const fmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
   const year = end.slice(0, 4);
   const dateLabel = `${fmt(start)} – ${fmt(end)}, ${year}`;
+  const weeklyDesc = `XRPLF GitHub activity for ${dateLabel} — what merged, what's in progress, and what to watch across rippled, xrpl.js, xrpl-py, and more.`;
+  const page = buildPage(`XRPL Monday Brew ☕ — ${dateLabel}`, `<div class="animate-in">${nav}${trimmedHtml}${genInfo}</div>`, { slug, description: weeklyDesc });
+  writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
   reportLinks.push({ slug, file, dateLabel });
   console.log(`  Built ${slug}.html`);
 }
@@ -418,10 +425,11 @@ if (existsSync(DAILY_DIR)) {
     const genModel = metaMatch && metaMatch[2] !== "none" ? metaMatch[2] : null;
     const genInfo = genDate && genModel ? `<div class="gen-info">Generated on ${genDate} using ${genModel}</div>` : "";
     const nav = `<div class="nav"><a href="index.html">&larr; All reports</a></div>`;
-    const page = buildPage(`Daily Espresso ☕ — ${file.replace(".md", "")}`, `<div class="animate-in">${nav}${html}${genInfo}</div>`);
-    writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
     const date = file.replace(".md", "");
     const dayLabel = new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", year: "numeric" });
+    const espressoDesc = `Daily XRPLF development digest for ${dayLabel} — quick summary of PRs merged, issues opened, and discussions across XRPL repos.`;
+    const page = buildPage(`Daily Espresso ☕ — ${dayLabel}`, `<div class="animate-in">${nav}${html}${genInfo}</div>`, { slug, description: espressoDesc });
+    writeFileSync(join(SITE_DIR, `${slug}.html`), page, "utf-8");
     espressoLinks.push({ slug, date, dayLabel });
     console.log(`  Built ${slug}.html`);
   }
@@ -453,7 +461,7 @@ const indexBody = `
 <h1 class="site-title">XRPL Monday Brew ☕</h1>
 <div class="index-intro">
 <p>AI-generated summaries of development activity across the <a href="https://github.com/XRPLF">XRPLF</a> organization.</p>
-<p class="index-desc">What's merging, which amendments are moving, what the core devs are building. Weekly deep-dives on Mondays, quick espresso shots Tuesday through Friday. No GitHub diving required.</p>
+<p class="index-desc">What's merging, which amendments are moving, what the core devs are building. Weekly deep-dives on Mondays, quick espresso shots Tuesday through Friday.</p>
 </div>
 </div>
 <hr>
