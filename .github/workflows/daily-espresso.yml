@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       days_ago:
-        description: 'Days ago (0 = today)'
+        description: 'Extra days back (0 = yesterday, 1 = two days ago)'
         required: false
         default: '0'
 
