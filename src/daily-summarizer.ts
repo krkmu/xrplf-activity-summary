@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RepoActivity } from "./types.js";
-import type { XlsSpec, AmendmentStatus } from "./collector.js";
-import { buildXlsContext, buildAmendmentContext } from "./summarizer.js";
+import type { XlsSpec, AmendmentStatus, SecurityAdvisory } from "./collector.js";
+import { buildXlsContext, buildAmendmentContext, redactSecurityItems } from "./summarizer.js";
 
 function buildRepoSection(repo: RepoActivity): string {
   const parts: string[] = [`## ${repo.repo}`];
@@ -101,7 +101,15 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - Do not repeat the same PR/issue across multiple sections.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness when relevant.
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
-- Use labels to flag important items: "security", "bug", "breaking change", "API Change" labels deserve mention.
+- Use labels to flag important items: "bug", "breaking change", "API Change" labels deserve mention.
+
+**Responsible Disclosure — CRITICAL:**
+- Security-related items (PRs/issues with labels containing "security" or "vulnerability", or titles/bodies mentioning CVEs, exploits, or vulnerabilities) require extreme caution.
+- If a security fix has been MERGED but there is NO corresponding tagged release in the data, do NOT highlight it. Mention it only as a routine merge with minimal detail (e.g., "a fix was merged to develop in rippled"). Do not describe the vulnerability, attack vector, or affected component.
+- If a security fix has a tagged release AND an official advisory or blog post in the data, you may describe it — but only using the language from the official advisory. Do not add interpretation or severity beyond what the advisory states.
+- Never put unpatched or unreleased security items in TL;DR or headings.
+- When in doubt, understate. A missed highlight is harmless; amplifying an unpatched vulnerability is dangerous.
+
 - If a "Previous Day's Espresso" is provided, use it for continuity: note items that were "Opened" yesterday and merged today, and flag any amendment status changes compared to yesterday's context. Do not repeat yesterday's content — only reference it when there is a meaningful update.
 
 **Contributors:**
@@ -144,9 +152,13 @@ export function buildDailyPrompt(
   date: string,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  previousEspresso?: string
+  previousEspresso?: string,
+  advisories: SecurityAdvisory[] = []
 ): { userMessage: string; systemPrompt: string } {
-  const repoSections = repos
+  // Redact security-sensitive content before building prompt
+  const safeRepos = redactSecurityItems(repos, { advisories });
+
+  const repoSections = safeRepos
     .map(buildRepoSection)
     .filter(Boolean);
 
@@ -181,9 +193,10 @@ export async function summarizeDaily(
   date: string,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  previousEspresso?: string
+  previousEspresso?: string,
+  advisories: SecurityAdvisory[] = []
 ): Promise<DailySummarizeResult> {
-  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso);
+  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories);
 
   console.log(`\nSending to Claude for daily espresso (${userMessage.length} chars)...`);
 

@@ -723,6 +723,52 @@ export function saveCachedAmendments(cacheDir: string, amendments: AmendmentStat
   writeFileSync(join(cacheDir, "amendments.json"), JSON.stringify(amendments, null, 2), "utf-8");
 }
 
+export interface SecurityAdvisory {
+  ghsaId: string;
+  summary: string;
+  severity: string;
+  publishedAt: string;
+  url: string;
+  repo: string;
+}
+
+/** Fetch published GitHub Security Advisories for all tracked repos. */
+export async function fetchSecurityAdvisories(token: string): Promise<SecurityAdvisory[]> {
+  console.log("Fetching GitHub Security Advisories...");
+  const headers = {
+    Authorization: `token ${token}`,
+    Accept: "application/vnd.github.v3+json",
+  };
+
+  const advisories: SecurityAdvisory[] = [];
+
+  for (const repo of REPOS) {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${repo.owner}/${repo.name}/security-advisories?state=published&per_page=20`,
+        { headers }
+      );
+      if (!res.ok) continue; // 404 if advisories not enabled
+      const data: any[] = await res.json();
+      for (const a of data) {
+        advisories.push({
+          ghsaId: a.ghsa_id,
+          summary: a.summary ?? "",
+          severity: a.severity ?? "unknown",
+          publishedAt: a.published_at ?? "",
+          url: a.html_url ?? "",
+          repo: `${repo.owner}/${repo.name}`,
+        });
+      }
+    } catch {
+      // Skip repos where advisories API fails
+    }
+  }
+
+  console.log(`  Found ${advisories.length} published advisories`);
+  return advisories;
+}
+
 export interface BlogPost {
   filename: string;
   date: string;

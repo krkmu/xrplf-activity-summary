@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { WeeklyData, RepoActivity } from "./types.js";
-import type { XlsSpec, AmendmentStatus, BlogPost } from "./collector.js";
+import type { WeeklyData, RepoActivity, PullRequest, Issue, Discussion } from "./types.js";
+import type { XlsSpec, AmendmentStatus, BlogPost, SecurityAdvisory } from "./collector.js";
 
 // Rough estimate: 1 token ≈ 4 chars for English text
 const CHARS_PER_TOKEN = 4;
@@ -156,7 +156,15 @@ Audience: XRPL validators, developers, and non-technical community members.
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Use the Amendment Lifecycle Status to report accurate statuses. Don't present already-known statuses as news unless they changed THIS week.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
-- Use labels to flag important items: "security", "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
+- Use labels to flag important items: "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
+
+**Responsible Disclosure — CRITICAL:**
+- Security-related items (PRs/issues with labels containing "security" or "vulnerability", or titles/bodies mentioning CVEs, exploits, or vulnerabilities) require extreme caution.
+- If a security fix has been MERGED but there is NO corresponding tagged release in the data, do NOT highlight it. Mention it only as a routine merge with minimal detail (e.g., "a fix was merged to develop in rippled"). Do not describe the vulnerability, attack vector, or affected component.
+- If a security fix has a tagged release AND an official advisory or blog post in the data, you may describe it — but only using the language from the official advisory. Do not add interpretation or severity beyond what the advisory states.
+- Never put unpatched or unreleased security items in TL;DR, headings, or the Twitter thread.
+- When in doubt, understate. A missed highlight is harmless; amplifying an unpatched vulnerability is dangerous.
+
 - Use discussion data to surface community conversations, feature proposals, and governance topics
 - If a "Previous Week Report" is provided, you MUST compare it with the current week in "By the Numbers" — show changes in PR/commit counts (↑/↓/flat), note items that were "In Progress" last week and merged this week, and highlight new trends
 - Only facts from the data. No speculation, no assumptions, no filler on quiet weeks.
@@ -271,6 +279,71 @@ async function callClaudeWithRetry(
   throw new Error("Exhausted retries");
 }
 
+const SECURITY_LABELS = /\b(security|vulnerability|cve)\b/i;
+const SECURITY_TITLE = /\b(CVE-\d{4}-\d+|security|vulnerability|exploit)\b/i;
+
+export interface DisclosureSources {
+  advisories?: SecurityAdvisory[];
+  blogPosts?: BlogPost[];
+}
+
+/** Strip bodies and comments from security-sensitive items so the LLM never sees exploit details.
+ *  Items are NOT redacted if official disclosure exists (release, advisory, or blog post). */
+export function redactSecurityItems(repos: RepoActivity[], sources: DisclosureSources = {}): RepoActivity[] {
+  const REDACTED = "[Content redacted for responsible disclosure]";
+  const { advisories = [], blogPosts = [] } = sources;
+
+  // Build set of repos with official public disclosure
+  const disclosedRepos = new Set<string>();
+  for (const a of advisories) disclosedRepos.add(a.repo);
+  for (const p of blogPosts) {
+    if (SECURITY_TITLE.test(p.title) || SECURITY_TITLE.test(p.body)) {
+      // Blog posts are org-wide, mark all repos as disclosed
+      for (const repo of repos) disclosedRepos.add(`${repo.owner}/${repo.repo}`);
+    }
+  }
+
+  function isSecurityItem(labels: string[], title: string): boolean {
+    return labels.some((l) => SECURITY_LABELS.test(l)) || SECURITY_TITLE.test(title);
+  }
+
+  return repos.map((repo) => {
+    const repoKey = `${repo.owner}/${repo.repo}`;
+
+    // Check if any release in this repo covers a security fix (indicates public disclosure)
+    const hasSecurityRelease = repo.releases.some(
+      (r) => SECURITY_TITLE.test(r.name) || SECURITY_TITLE.test(r.body)
+    );
+
+    // If there's an official disclosure source, don't redact — it's public
+    if (hasSecurityRelease || disclosedRepos.has(repoKey)) return repo;
+
+    const redactPR = (pr: PullRequest): PullRequest =>
+      isSecurityItem(pr.labels, pr.title)
+        ? { ...pr, body: REDACTED, commentContent: [], reviewContent: [] }
+        : pr;
+
+    const redactIssue = (issue: Issue): Issue =>
+      isSecurityItem(issue.labels, issue.title)
+        ? { ...issue, body: REDACTED, commentContent: [] }
+        : issue;
+
+    const redactDiscussion = (d: Discussion): Discussion =>
+      isSecurityItem([], d.title)
+        ? { ...d, body: REDACTED, commentContent: [] }
+        : d;
+
+    return {
+      ...repo,
+      mergedPRs: repo.mergedPRs.map(redactPR),
+      openedPRs: repo.openedPRs.map(redactPR),
+      openedIssues: repo.openedIssues.map(redactIssue),
+      closedIssues: repo.closedIssues.map(redactIssue),
+      discussions: repo.discussions.map(redactDiscussion),
+    };
+  });
+}
+
 export function buildAmendmentContext(amendments: AmendmentStatus[]): string {
   if (amendments.length === 0) return "";
 
@@ -340,10 +413,14 @@ export function buildPrompt(
   data: WeeklyData,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  blogPosts: BlogPost[] = []
+  blogPosts: BlogPost[] = [],
+  advisories: SecurityAdvisory[] = []
 ): { userMessage: string; systemPrompt: string; fullDataLength: number } {
+  // Redact security-sensitive content before building prompt
+  const safeRepos = redactSecurityItems(data.repos, { advisories, blogPosts });
+
   // Build per-repo sections
-  const repoSections = data.repos
+  const repoSections = safeRepos
     .map(buildRepoSection)
     .filter(Boolean);
 
@@ -377,9 +454,10 @@ export async function summarize(
   data: WeeklyData,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  blogPosts: BlogPost[] = []
+  blogPosts: BlogPost[] = [],
+  advisories: SecurityAdvisory[] = []
 ): Promise<SummarizeResult> {
-  const { userMessage, systemPrompt, fullDataLength } = buildPrompt(data, xlsSpecs, amendments, blogPosts);
+  const { userMessage, systemPrompt, fullDataLength } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories);
 
   console.log(`\nSending to Claude for summarization (${fullDataLength} chars of activity data)...`);
 

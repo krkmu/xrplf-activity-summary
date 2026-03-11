@@ -6,6 +6,7 @@ import {
   collectRepoActivity,
   fetchXlsSpecs,
   fetchAmendmentStatuses,
+  fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarizeDaily, buildDailyPrompt } from "./daily-summarizer.js";
 import { graphql } from "@octokit/graphql";
@@ -105,9 +106,10 @@ async function main() {
     return;
   }
 
-  // Fetch context (lighter than weekly — skip blogs, just specs and amendments)
+  // Fetch context (lighter than weekly — skip blogs, just specs, amendments, and advisories)
   const xlsSpecs = await fetchXlsSpecs(githubToken);
   const amendments = await fetchAmendmentStatuses(githubToken);
+  const advisories = await fetchSecurityAdvisories(githubToken);
 
   // Load previous day's espresso for continuity
   const prevDate = new Date(`${date}T00:00:00Z`);
@@ -126,7 +128,7 @@ async function main() {
   const inputPath = join(outputDir, `${base}_input.md`);
 
   if (promptOnly) {
-    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso);
+    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories);
     writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
     console.log(`\nPrompt saved to ${inputPath}`);
     return;
@@ -137,7 +139,7 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspresso);
+  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspresso, advisories);
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;

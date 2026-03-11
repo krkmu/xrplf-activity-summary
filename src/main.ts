@@ -11,6 +11,7 @@ import {
   fetchAmendmentStatuses,
   saveCachedAmendments,
   fetchBlogPosts,
+  fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarize, buildPrompt } from "./summarizer.js";
 
@@ -65,6 +66,9 @@ async function main() {
 
   // Fetch blog posts for the week
   const blogPosts = await fetchBlogPosts(githubToken, weekStart, weekEnd);
+
+  // Fetch published security advisories for responsible disclosure logic
+  const advisories = await fetchSecurityAdvisories(githubToken);
   let data = noCache ? null : loadCachedData(cacheDir, weekStart, weekEnd);
 
   if (!data) {
@@ -106,7 +110,7 @@ async function main() {
 
   if (promptOnly) {
     // Build prompt without calling Claude API
-    const { userMessage, systemPrompt } = buildPrompt(data, xlsSpecs, amendments, blogPosts);
+    const { userMessage, systemPrompt } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories);
     writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
     console.log(`\nPrompt saved to ${inputPath}`);
     console.log("Use this file with Claude Code or paste into a conversation.");
@@ -119,7 +123,7 @@ async function main() {
   }
 
   // Summarize with Claude API
-  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts);
+  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts, advisories);
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;
