@@ -72,10 +72,10 @@ CLAUDE_MODEL=claude-opus-4-6 npm run dev
 
 # --- Daily Espresso ---
 
-# Today's espresso
+# Yesterday's espresso (default — collects the previous day's activity)
 npm run daily
 
-# Specific day
+# Two days ago
 npm run daily -- --days-ago=1
 
 # Force re-fetch
@@ -102,11 +102,11 @@ output/
   2026-03-02_2026-03-08_input.md    # Full prompt sent to Claude (system + user message)
 ```
 
-Each daily run produces files in `output/daily/`:
+Each daily run produces files in `output/daily/`, named after the day being covered (yesterday by default):
 
 ```
 output/daily/
-  2026-03-10.md                     # Daily espresso (markdown)
+  2026-03-10.md                     # Daily espresso covering March 10 activity
   2026-03-10_input.md               # Full prompt sent to Claude
 ```
 
@@ -121,7 +121,7 @@ The `build-pages` script generates styled HTML pages in `site/` from all reports
 Three GitHub Actions workflows handle deployment:
 
 - **`weekly-report.yml`** — Runs every Sunday at midnight UTC (and manually via workflow_dispatch). Generates the weekly report, cleans previous daily espressos, commits to the repo, builds HTML pages, and deploys to GitHub Pages.
-- **`daily-espresso.yml`** — Runs Tuesday through Friday at 1:00 UTC (and manually via workflow_dispatch). Generates the daily espresso, commits, and deploys.
+- **`daily-espresso.yml`** — Runs Tuesday through Friday at 1:00 UTC (and manually via workflow_dispatch). Generates the espresso for the **previous day's** activity (e.g., runs Wednesday 1:00 UTC → covers Tuesday), commits, and deploys.
 - **`deploy-pages.yml`** — Triggers automatically on push to `main` when `output/*.md`, `scripts/build-pages.js`, or `static/` change. Rebuilds and redeploys HTML pages without regenerating reports.
 
 **Setup:**

@@ -20,7 +20,8 @@ config({ path: join(PROJECT_ROOT, ".env") });
 
 function getDayRange(daysAgo = 0): { since: string; until: string; date: string } {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - daysAgo);
+  // Default: collect YESTERDAY's activity (the workflow runs after midnight UTC)
+  d.setUTCDate(d.getUTCDate() - 1 - daysAgo);
   const date = d.toISOString().slice(0, 10);
   const start = new Date(`${date}T00:00:00.000Z`);
   const end = new Date(`${date}T23:59:59.999Z`);
