@@ -34,6 +34,7 @@ export interface PullRequest {
   authorAssociation: AuthorAssociation;
   mergedAt: string | null;
   createdAt: string;
+  updatedAt: string;
   state: string;
   labels: string[];
   body: string;

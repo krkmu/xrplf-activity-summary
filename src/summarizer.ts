@@ -152,6 +152,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 **Content:**
 - Unconfirmed bugs, open issues, and unmerged PRs are never headline material — they belong in "What to Watch" or "Community".
 - Group by theme (protocol, performance, security, SDKs, docs, infra) — not by repo. Always name the repo in each item so the reader knows which codebase is affected.
+- **Documentation is first-class.** Activity on documentation repos (xrpl-dev-portal, XRPL-Standards, opensource.ripple.com) must always be surfaced — these repos publish to xrpl.org and are how developers learn about new features. A new XLS spec, an amendment doc, or a dev portal restructure is as newsworthy as a code change. Include doc PRs (merged or in-progress) in their relevant sections, and mention significant doc work in TL;DR when it is merged.
 - For protocol/amendment changes: explain network impact in plain terms, flag action needed by validators/operators
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Use the Amendment Lifecycle Status to report accurate statuses. Don't present already-known statuses as news unless they changed THIS week.

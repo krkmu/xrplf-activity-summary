@@ -103,6 +103,7 @@ Audience: XRPL validators, developers, and community members who want a quick da
 **Content:**
 - This is a quick daily espresso, not a deep weekly analysis. Be concise and scannable.
 - Always name the repo in each item (e.g., "in rippled", "in xrpl-py", "on the developer portal").
+- **Documentation is first-class.** Activity on documentation repos (xrpl-dev-portal, XRPL-Standards, opensource.ripple.com) must always be surfaced — these repos publish to xrpl.org. A new XLS spec, an amendment doc, or a dev portal update is as newsworthy as a code change. Always mention doc PRs (merged or opened) in the relevant sections.
 - Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases count as shipped. Say "merged to develop" or "merged to main" depending on the target branch. For rippled specifically, develop is the active development branch and main tracks releases.
 - Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance. NEVER use "Critical", "Urgent", "Emergency", or "Security" in headings unless the item has the corresponding label. A bug fix is a bug fix, not a "Critical Fix".
 - Only facts from the data. No speculation, no assumptions, no filler.

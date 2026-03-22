@@ -42,6 +42,7 @@ const PR_FIELDS = `
   authorAssociation
   mergedAt
   createdAt
+  updatedAt
   state
   labels(first: 10) { nodes { name } }
   body
@@ -131,6 +132,14 @@ query($org: String!, $repo: String!, $since: GitTimestamp!, $until: GitTimestamp
       first: 30
       states: OPEN
       orderBy: { field: CREATED_AT, direction: DESC }
+    ) {
+      nodes { ${PR_FIELDS} }
+    }
+
+    updatedPRs: pullRequests(
+      first: 30
+      states: OPEN
+      orderBy: { field: UPDATED_AT, direction: DESC }
     ) {
       nodes { ${PR_FIELDS} }
     }
@@ -272,6 +281,7 @@ function mapPR(node: any): PullRequest {
     authorAssociation: node.authorAssociation ?? "NONE",
     mergedAt: node.mergedAt ?? null,
     createdAt: node.createdAt,
+    updatedAt: node.updatedAt ?? node.createdAt,
     state: node.state,
     labels: node.labels?.nodes?.map((l: any) => l.name) ?? [],
     body: (node.body ?? "").slice(0, 500),
@@ -507,11 +517,23 @@ export async function collectRepoActivity(
     "mergedAt"
   );
 
-  const openedPRs = filterByDateRange<PullRequest>(
+  // Combine PRs created this period + PRs updated this period, deduplicate by number
+  const createdPRs = filterByDateRange<PullRequest>(
     (r.openedPRs?.nodes ?? []).map(mapPR),
     since,
     until
   );
+  const recentlyUpdatedPRs = filterByDateRange<PullRequest>(
+    (r.updatedPRs?.nodes ?? []).map(mapPR),
+    since,
+    until,
+    "updatedAt"
+  );
+  const seenPRNumbers = new Set(createdPRs.map((pr) => pr.number));
+  const openedPRs = [
+    ...createdPRs,
+    ...recentlyUpdatedPRs.filter((pr) => !seenPRNumbers.has(pr.number)),
+  ];
 
   const openedIssues = filterByDateRange<Issue>(
     allOpenIssueNodes.map(mapIssue),
@@ -552,7 +574,7 @@ export async function collectRepoActivity(
 
   // Fetch active branches
   const openPRBranchNames = new Set<string>(
-    (r.openedPRs?.nodes ?? []).map((pr: any) => pr.headRefName as string).filter(Boolean)
+    [...(r.openedPRs?.nodes ?? []), ...(r.updatedPRs?.nodes ?? [])].map((pr: any) => pr.headRefName as string).filter(Boolean)
   );
   let activeBranches: ActiveBranch[] = [];
   try {
