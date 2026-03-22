@@ -414,7 +414,8 @@ export function buildPrompt(
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
   blogPosts: BlogPost[] = [],
-  advisories: SecurityAdvisory[] = []
+  advisories: SecurityAdvisory[] = [],
+  dailyEspressos: string[] = []
 ): { userMessage: string; systemPrompt: string; fullDataLength: number } {
   // Redact security-sensitive content before building prompt
   const safeRepos = redactSecurityItems(data.repos, { advisories, blogPosts });
@@ -438,8 +439,14 @@ export function buildPrompt(
   // Build blog posts context
   const blogContext = buildBlogContext(blogPosts);
 
+  // Daily espressos from this week for continuity
+  const dailyContext = dailyEspressos.length > 0
+    ? `## Daily Espressos This Week (for context and continuity)\nThese daily digests were published earlier this week. Use them for continuity — avoid contradicting what was already published, and build on their narrative where relevant.\n\n${dailyEspressos.join("\n\n---\n\n")}`
+    : "";
+
   const fullData = repoSections.join("\n\n---\n\n") +
     (prevReportSection ? `\n\n---\n\n${prevReportSection}` : "") +
+    (dailyContext ? `\n\n---\n\n${dailyContext}` : "") +
     (blogContext ? `\n\n---\n\n${blogContext}` : "") +
     (xlsContext ? `\n\n---\n\n${xlsContext}` : "") +
     (amendmentContext ? `\n\n---\n\n${amendmentContext}` : "");
@@ -455,9 +462,10 @@ export async function summarize(
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
   blogPosts: BlogPost[] = [],
-  advisories: SecurityAdvisory[] = []
+  advisories: SecurityAdvisory[] = [],
+  dailyEspressos: string[] = []
 ): Promise<SummarizeResult> {
-  const { userMessage, systemPrompt, fullDataLength } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories);
+  const { userMessage, systemPrompt, fullDataLength } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories, dailyEspressos);
 
   console.log(`\nSending to Claude for summarization (${fullDataLength} chars of activity data)...`);
 

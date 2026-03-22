@@ -92,7 +92,8 @@ async function main() {
       r.openedIssues.length +
       r.closedIssues.length +
       r.discussions.length +
-      r.releases.length,
+      r.releases.length +
+      r.activeBranches.length,
     0
   );
 

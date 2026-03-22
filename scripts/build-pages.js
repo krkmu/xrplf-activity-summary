@@ -7,6 +7,73 @@ const SITE_DIR = join(import.meta.dirname, "..", "site");
 
 mkdirSync(SITE_DIR, { recursive: true });
 
+// Repos to fetch open PR counts for (mirrors src/config.ts)
+const REPOS = [
+  { owner: "XRPLF", name: "rippled" },
+  { owner: "XRPLF", name: "xrpl.js" },
+  { owner: "XRPLF", name: "xrpl-py" },
+  { owner: "XRPLF", name: "xrpl-dev-portal" },
+  { owner: "XRPLF", name: "clio" },
+  { owner: "XRPLF", name: "XRPL-Standards" },
+  { owner: "XRPLF", name: "xrpl4j" },
+  { owner: "ripple", name: "opensource.ripple.com" },
+];
+
+async function fetchOpenPRCounts() {
+  const headers = { Accept: "application/vnd.github.v3+json" };
+  // Use token if available (CI has GH_PAT; locally avoids 60 req/h unauthenticated limit)
+  const token = process.env.GITHUB_TOKEN || process.env.GH_PAT;
+  if (token) headers.Authorization = `token ${token}`;
+
+  const counts = [];
+  for (const repo of REPOS) {
+    try {
+      const prRes = await fetch(
+        `https://api.github.com/search/issues?q=repo:${repo.owner}/${repo.name}+type:pr+state:open&per_page=1`,
+        { headers }
+      );
+      if (!prRes.ok) { counts.push({ owner: repo.owner, repo: repo.name, count: 0 }); continue; }
+      const prData = await prRes.json();
+      counts.push({ owner: repo.owner, repo: repo.name, count: prData.total_count ?? 0 });
+    } catch {
+      counts.push({ owner: repo.owner, repo: repo.name, count: 0 });
+    }
+  }
+  return counts.sort((a, b) => b.count - a.count);
+}
+
+function buildPRChart(counts) {
+  const maxCount = Math.max(...counts.map((c) => c.count), 1);
+  const barHeight = 26;
+  const gap = 8;
+  const labelWidth = 180;
+  const chartWidth = 500;
+  const totalHeight = counts.length * (barHeight + gap) - gap;
+
+  const bars = counts.map((c, i) => {
+    const y = i * (barHeight + gap);
+    const barW = Math.max((c.count / maxCount) * (chartWidth - labelWidth - 50), c.count > 0 ? 3 : 0);
+    return `
+      <a href="https://github.com/${c.owner}/${c.repo}" target="_blank" rel="noopener"><text x="${labelWidth - 10}" y="${y + barHeight / 2 + 4}" text-anchor="end" fill="#c4a882" font-size="13" font-family="Inter, sans-serif" style="cursor:pointer">${c.repo}</text></a>
+      <rect x="${labelWidth}" y="${y}" width="${barW}" height="${barHeight}" rx="4" fill="#c4a882" opacity="0.85"/>
+      <text x="${labelWidth + barW + 8}" y="${y + barHeight / 2 + 4}" fill="#fafafa" font-size="12" font-weight="600" font-family="Inter, sans-serif">${c.count}</text>`;
+  }).join("");
+
+  const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  return `
+<div class="animate-in">
+<p class="section-label">Open Pull Requests</p>
+<p style="color: var(--fg); margin-bottom: 1rem; font-size: 0.88em;">Current open PRs across tracked repos — updated at build time (${date}).</p>
+<div style="display: flex; justify-content: center;">
+<svg width="${chartWidth}" height="${totalHeight}" viewBox="0 0 ${chartWidth} ${totalHeight}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Open pull requests by repository">
+${bars}
+</svg>
+</div>
+</div>`;
+}
+
+
 // Copy static assets
 const STATIC_DIR = join(import.meta.dirname, "..", "static");
 copyFileSync(join(STATIC_DIR, "og-image.png"), join(SITE_DIR, "og-image.png"));
@@ -435,6 +502,16 @@ if (existsSync(DAILY_DIR)) {
   }
 }
 
+// Fetch open PR counts and build chart
+let prChartHtml = "";
+try {
+  const prCounts = await fetchOpenPRCounts();
+  prChartHtml = buildPRChart(prCounts);
+  console.log(`  Fetched open PR counts: ${prCounts.map((c) => `${c.repo}=${c.count}`).join(", ")}`);
+} catch (err) {
+  console.log(`  Could not fetch PR counts: ${err.message}`);
+}
+
 // Build espresso section HTML
 const latestWeeklyDate = reportLinks.length > 0 ? reportLinks[0].slug.split("_")[1] : null;
 let espressoSection = "";
@@ -473,6 +550,7 @@ ${espressoLinks.length > 0 ? "<hr>" : ""}
 ${reportLinks.map((r) => `<li><a href="${r.slug}.html">${r.dateLabel}</a></li>`).join("\n")}
 </ul>
 </div>
+${prChartHtml ? `<hr>\n${prChartHtml}` : ""}
 `;
 writeFileSync(join(SITE_DIR, "index.html"), buildPage("XRPL Monday Brew ☕", indexBody), "utf-8");
 console.log(`  Built index.html (${reportLinks.length} weekly, ${espressoLinks.length} daily)`);

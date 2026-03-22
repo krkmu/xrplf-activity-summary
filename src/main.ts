@@ -1,5 +1,5 @@
 import { config } from "dotenv";
-import { writeFileSync, readFileSync, mkdirSync, existsSync } from "fs";
+import { writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
@@ -86,6 +86,22 @@ async function main() {
     console.log(`No previous week report found (${prevReportPath}) — skipping week-over-week comparison`);
   }
 
+  // Load daily espressos from this week for continuity context
+  const dailyDir = join(outputDir, "daily");
+  const dailyEspressos: string[] = [];
+  if (existsSync(dailyDir)) {
+    const dailyFiles = readdirSync(dailyDir)
+      // "z" suffix ensures files on weekEnd date are included (e.g. "2026-03-22.md" <= "2026-03-22z")
+      .filter((f) => f.endsWith(".md") && !f.includes("_input") && f >= weekStart && f <= weekEnd + "z")
+      .sort();
+    for (const f of dailyFiles) {
+      dailyEspressos.push(readFileSync(join(dailyDir, f), "utf-8"));
+    }
+    if (dailyEspressos.length > 0) {
+      console.log(`Loaded ${dailyEspressos.length} daily espressos for this week's context`);
+    }
+  }
+
   // Check if there's any activity
   const totalActivity = data.repos.reduce(
     (sum, r) =>
@@ -110,7 +126,7 @@ async function main() {
 
   if (promptOnly) {
     // Build prompt without calling Claude API
-    const { userMessage, systemPrompt } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories);
+    const { userMessage, systemPrompt } = buildPrompt(data, xlsSpecs, amendments, blogPosts, advisories, dailyEspressos);
     writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
     console.log(`\nPrompt saved to ${inputPath}`);
     console.log("Use this file with Claude Code or paste into a conversation.");
@@ -123,7 +139,7 @@ async function main() {
   }
 
   // Summarize with Claude API
-  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts, advisories);
+  const result = await summarize(anthropicKey, data, xlsSpecs, amendments, blogPosts, advisories, dailyEspressos);
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;

@@ -65,13 +65,24 @@ function buildRepoSection(repo: RepoActivity): string {
     }
   }
 
+  if (repo.activeBranches.length > 0) {
+    parts.push("\n### Active Branches (no PR yet)");
+    for (const b of repo.activeBranches) {
+      const branchUrl = `https://github.com/${repo.owner}/${repo.repo}/tree/${encodeURIComponent(b.name)}`;
+      parts.push(
+        `- **${b.name}** by @${b.author} — "${b.lastCommitMessage}" (${b.lastCommitDate.slice(0, 10)}, ${b.aheadBy} commits ahead) ${branchUrl}`
+      );
+    }
+  }
+
   const hasActivity =
     repo.mergedPRs.length +
       repo.openedPRs.length +
       repo.openedIssues.length +
       repo.closedIssues.length +
       repo.discussions.length +
-      repo.releases.length >
+      repo.releases.length +
+      repo.activeBranches.length >
     0;
 
   return hasActivity ? parts.join("\n") : "";

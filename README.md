@@ -27,6 +27,7 @@ rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j (all un
 - XLS spec index from XRPL-Standards
 - Blog posts from `xrpl.org/blog` published during the week (release announcements, vulnerability disclosures, etc.)
 - Previous week's report (from `output/`) for week-over-week comparison
+- Daily espressos from the current week (from `output/daily/`) — passed as context to the weekly summarizer for narrative continuity
 
 ## Setup
 
@@ -114,7 +115,7 @@ Daily espressos are automatically cleaned up when the weekly report is generated
 
 The input files let you compare exactly what Claude received vs what it produced.
 
-The `build-pages` script generates styled HTML pages in `site/` from all reports (weekly + daily). The Twitter/X thread section is excluded from the HTML output.
+The `build-pages` script generates styled HTML pages in `site/` from all reports (weekly + daily). The Twitter/X thread section is excluded from the HTML output. The index page includes a live open PR count chart per repo, fetched from the GitHub API at build time.
 
 ### GitHub Pages (automated)
 
@@ -162,7 +163,7 @@ npm start       # run compiled version
 
 ### Tracked repos
 
-Edit the `REPOS` array in `src/config.ts` (shared by both weekly and daily):
+Edit the `REPOS` array in `src/config.ts` (shared by both weekly and daily). Also update the matching `REPOS` list in `scripts/build-pages.js` for the PR chart:
 
 ```typescript
 const REPOS = [
@@ -259,7 +260,7 @@ src/
   main.ts               — Weekly CLI entry point
   daily.ts              — Daily CLI entry point
 scripts/
-  build-pages.js        — Generates styled HTML pages from weekly + daily reports
+  build-pages.js        — Generates styled HTML pages from weekly + daily reports, includes open PR chart
 static/
   og-image.png          — Open Graph image for social media previews
 ```
