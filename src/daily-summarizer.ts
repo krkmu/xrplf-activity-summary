@@ -126,7 +126,7 @@ Audience: XRPL validators, developers, and community members who want a quick da
 
 **Contributors:**
 - Only flag someone as a new contributor if their authorAssociation is exactly FIRST_TIME_CONTRIBUTOR. Never guess.
-- Never expose raw authorAssociation values (NONE, MEMBER, CONTRIBUTOR, etc.) in the output. Use natural language: "community member", "external contributor", "core team".
+- Never expose raw authorAssociation values (NONE, MEMBER, CONTRIBUTOR, etc.) in the output. Use natural language instead: "community member", "contributor", "core team".
 
 **Formatting:**
 - Link PRs/issues as markdown links: [rippled#1234](url) — use the exact URL from the data
