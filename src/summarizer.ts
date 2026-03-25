@@ -222,7 +222,7 @@ End with a separate closing line (its own paragraph) linking to relevant sources
 ---
 *Summary AI-generated from GitHub activity data. This report covers PRs, issues, and discussions captured via the GitHub API — activity on development and test branches without associated PRs may not be reflected. Check the [XRPLF repos](https://github.com/XRPLF) directly for full activity. All links sourced from GitHub and xrpl.org.*`;
 
-async function callClaudeWithRetry(
+export async function callClaudeWithRetry(
   client: Anthropic,
   model: string,
   system: string,
@@ -386,7 +386,7 @@ export function buildXlsContext(specs: XlsSpec[]): string {
   return lines.join("\n");
 }
 
-function buildBlogContext(posts: BlogPost[]): string {
+export function buildBlogContext(posts: BlogPost[]): string {
   if (posts.length === 0) return "";
   const lines = [
     "## Official Blog Posts (xrpl.org/blog)",

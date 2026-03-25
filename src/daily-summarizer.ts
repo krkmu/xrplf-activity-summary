@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RepoActivity } from "./types.js";
-import type { XlsSpec, AmendmentStatus, SecurityAdvisory } from "./collector.js";
-import { buildXlsContext, buildAmendmentContext, redactSecurityItems } from "./summarizer.js";
+import type { XlsSpec, AmendmentStatus, SecurityAdvisory, BlogPost } from "./collector.js";
+import { buildXlsContext, buildAmendmentContext, redactSecurityItems, buildBlogContext, callClaudeWithRetry } from "./summarizer.js";
 
 function buildRepoSection(repo: RepoActivity): string {
   const parts: string[] = [`## ${repo.repo}`];
@@ -115,6 +115,11 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
 - Use labels to flag important items: "bug", "breaking change", "API Change" labels deserve mention.
 
+**Blog Posts:**
+- If "Official Blog Posts" data is provided, use it to add context when a PR merges a blog post (e.g., a vulnerability disclosure post on xrpl-dev-portal). The blog content tells you what the post actually says — use it.
+- For vulnerability disclosure blog posts: read the blog content carefully. If it describes issues that were already fixed in a past release, say so explicitly (e.g., "a retrospective disclosure of liveness bugs fixed in rippled 2.3.0 six months ago"). This prevents readers from thinking it is a new or active vulnerability. The goal is to inform without alarming.
+- Only use language and facts from the blog content itself. Do not add interpretation beyond what the post states.
+
 **Responsible Disclosure — CRITICAL:**
 - Security-related items (PRs/issues with labels containing "security" or "vulnerability", or titles/bodies mentioning CVEs, exploits, or vulnerabilities) require extreme caution.
 - If a security fix has been MERGED but there is NO corresponding tagged release in the data, do NOT highlight it. Mention it only as a routine merge with minimal detail (e.g., "a fix was merged to develop in rippled"). Do not describe the vulnerability, attack vector, or affected component.
@@ -165,10 +170,11 @@ export function buildDailyPrompt(
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
   previousEspresso?: string,
-  advisories: SecurityAdvisory[] = []
+  advisories: SecurityAdvisory[] = [],
+  blogPosts: BlogPost[] = []
 ): { userMessage: string; systemPrompt: string } {
   // Redact security-sensitive content before building prompt
-  const safeRepos = redactSecurityItems(repos, { advisories });
+  const safeRepos = redactSecurityItems(repos, { advisories, blogPosts });
 
   const repoSections = safeRepos
     .map(buildRepoSection)
@@ -176,6 +182,7 @@ export function buildDailyPrompt(
 
   const xlsContext = buildXlsContext(xlsSpecs);
   const amendmentContext = buildAmendmentContext(amendments);
+  const blogContext = buildBlogContext(blogPosts);
 
   const prevSection = previousEspresso
     ? `## Previous Day's Espresso (for context)\n\n${previousEspresso}`
@@ -183,6 +190,7 @@ export function buildDailyPrompt(
 
   const fullData = repoSections.join("\n\n---\n\n") +
     (prevSection ? `\n\n---\n\n${prevSection}` : "") +
+    (blogContext ? `\n\n---\n\n${blogContext}` : "") +
     (xlsContext ? `\n\n---\n\n${xlsContext}` : "") +
     (amendmentContext ? `\n\n---\n\n${amendmentContext}` : "");
 
@@ -206,9 +214,10 @@ export async function summarizeDaily(
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
   previousEspresso?: string,
-  advisories: SecurityAdvisory[] = []
+  advisories: SecurityAdvisory[] = [],
+  blogPosts: BlogPost[] = []
 ): Promise<DailySummarizeResult> {
-  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories);
+  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
 
   console.log(`\nSending to Claude for daily espresso (${userMessage.length} chars)...`);
 
@@ -216,23 +225,7 @@ export async function summarizeDaily(
   const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6";
   console.log(`  Using model: ${model}`);
 
-  const message = await client.messages.create({
-    model,
-    max_tokens: 4000,
-    messages: [{ role: "user", content: userMessage }],
-    system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-  });
-
-  const usage = message.usage as any;
-  const cacheInfo = usage.cache_read_input_tokens
-    ? ` (${usage.cache_read_input_tokens} cached)`
-    : "";
-  console.log(`  Tokens: ${usage.input_tokens} in / ${usage.output_tokens} out${cacheInfo}`);
-
-  const summary = message.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("\n");
+  const summary = await callClaudeWithRetry(client, model, systemPrompt, userMessage, 4000);
 
   return { summary, input: userMessage, systemPrompt, model, generatedAt: new Date().toISOString() };
 }

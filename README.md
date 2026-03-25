@@ -25,7 +25,7 @@ rippled, xrpl.js, xrpl-py, xrpl-dev-portal, clio, XRPL-Standards, xrpl4j (all un
   - rippled's `features.macro` (supported/unsupported, vote behavior)
   - xrpl.org's `known-amendments.md` (Enabled, Open for Voting, In Development, Obsolete)
 - XLS spec index from XRPL-Standards
-- Blog posts from `xrpl.org/blog` published during the week (release announcements, vulnerability disclosures, etc.)
+- Blog posts from `xrpl.org/blog` — weekly reports use the exact week range; daily espressos use a 7-day rolling window for context (release announcements, vulnerability disclosures, etc.)
 - Previous week's report (from `output/`) for week-over-week comparison
 - Daily espressos from the current week (from `output/daily/`) — passed as context to the weekly summarizer for narrative continuity
 
@@ -238,7 +238,7 @@ A lighter, faster digest published Tuesday through Friday:
 | **Discussions** | New or active discussions |
 | **Quick Stats** | One-liner with exact counts |
 
-Daily espressos share the same editorial rules as the weekly (no hallucinated URLs, no severity inflation, merged ≠ shipped). They are automatically cleaned up when the next weekly brew is published.
+Daily espressos share the same editorial rules as the weekly (no hallucinated URLs, no severity inflation, merged ≠ shipped). Blog posts published in the past 7 days are fetched as context — this allows the summarizer to properly contextualize vulnerability disclosures (e.g., noting that a disclosure is retrospective and the fix was already shipped months ago). They are automatically cleaned up when the next weekly brew is published.
 
 ## Disclaimer
 

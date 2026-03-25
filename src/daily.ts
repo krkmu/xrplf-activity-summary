@@ -7,6 +7,7 @@ import {
   fetchXlsSpecs,
   fetchAmendmentStatuses,
   fetchSecurityAdvisories,
+  fetchBlogPosts,
 } from "./collector.js";
 import { summarizeDaily, buildDailyPrompt } from "./daily-summarizer.js";
 import { graphql } from "@octokit/graphql";
@@ -108,10 +109,15 @@ async function main() {
     return;
   }
 
-  // Fetch context (lighter than weekly — skip blogs, just specs, amendments, and advisories)
+  // Fetch context sources
   const xlsSpecs = await fetchXlsSpecs(githubToken);
   const amendments = await fetchAmendmentStatuses(githubToken);
   const advisories = await fetchSecurityAdvisories(githubToken);
+  // Use a 7-day window for blog posts — a post may have been published a day
+  // or two before and still be relevant context for today's activity
+  const blogWindowStart = new Date(`${date}T00:00:00Z`);
+  blogWindowStart.setUTCDate(blogWindowStart.getUTCDate() - 6);
+  const blogPosts = await fetchBlogPosts(githubToken, blogWindowStart.toISOString().slice(0, 10), date);
 
   // Load previous day's espresso for continuity
   const prevDate = new Date(`${date}T00:00:00Z`);
@@ -130,7 +136,7 @@ async function main() {
   const inputPath = join(outputDir, `${base}_input.md`);
 
   if (promptOnly) {
-    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories);
+    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
     writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
     console.log(`\nPrompt saved to ${inputPath}`);
     return;
@@ -141,7 +147,7 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspresso, advisories);
+  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;
