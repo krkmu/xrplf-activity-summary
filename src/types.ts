@@ -30,6 +30,8 @@ export interface PullRequest {
   title: string;
   number: number;
   url: string;
+  isDraft: boolean;
+  baseRefName: string;
   author: string;
   authorAssociation: AuthorAssociation;
   mergedAt: string | null;

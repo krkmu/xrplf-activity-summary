@@ -1,0 +1,18 @@
+{
+  "org": "XRPLF",
+  "concurrency": 2,
+  "repos": [
+    {
+      "name": "rippled",
+      "openPRBaseBranch": "develop",
+      "excludeDraftPRs": true
+    },
+    { "name": "xrpl.js" },
+    { "name": "xrpl-py" },
+    { "name": "xrpl-dev-portal" },
+    { "name": "clio" },
+    { "name": "XRPL-Standards" },
+    { "name": "xrpl4j" },
+    { "name": "ripple/opensource.ripple.com" }
+  ]
+}

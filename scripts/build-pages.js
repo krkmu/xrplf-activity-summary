@@ -7,17 +7,14 @@ const SITE_DIR = join(import.meta.dirname, "..", "site");
 
 mkdirSync(SITE_DIR, { recursive: true });
 
-// Repos to fetch open PR counts for (mirrors src/config.ts)
-const REPOS = [
-  { owner: "XRPLF", name: "rippled" },
-  { owner: "XRPLF", name: "xrpl.js" },
-  { owner: "XRPLF", name: "xrpl-py" },
-  { owner: "XRPLF", name: "xrpl-dev-portal" },
-  { owner: "XRPLF", name: "clio" },
-  { owner: "XRPLF", name: "XRPL-Standards" },
-  { owner: "XRPLF", name: "xrpl4j" },
-  { owner: "ripple", name: "opensource.ripple.com" },
-];
+// Load repos from shared config
+const rawConfig = JSON.parse(readFileSync(join(import.meta.dirname, "..", "config.json"), "utf-8"));
+const REPOS = rawConfig.repos.map((r) => {
+  const parts = r.name.split("/");
+  return parts.length === 2
+    ? { owner: parts[0], name: parts[1] }
+    : { owner: rawConfig.org, name: r.name };
+});
 
 async function fetchOpenPRCounts() {
   const headers = { Accept: "application/vnd.github.v3+json" };

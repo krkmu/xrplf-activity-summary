@@ -13,7 +13,7 @@ import type {
   CommitSummary,
   WeeklyData,
 } from "./types.js";
-import { DEFAULT_ORG, REPOS, CONCURRENCY } from "./config.js";
+import { DEFAULT_ORG, REPOS, CONCURRENCY, type RepoConfig } from "./config.js";
 
 function getWeekRange(weeksAgo = 0): { since: string; until: string } {
   const now = new Date();
@@ -37,7 +37,9 @@ const PR_FIELDS = `
   title
   number
   url
+  isDraft
   headRefName
+  baseRefName
   author { login }
   authorAssociation
   mergedAt
@@ -277,6 +279,8 @@ function mapPR(node: any): PullRequest {
     title: node.title,
     number: node.number,
     url: node.url,
+    isDraft: node.isDraft ?? false,
+    baseRefName: node.baseRefName ?? "",
     author: node.author?.login ?? "unknown",
     authorAssociation: node.authorAssociation ?? "NONE",
     mergedAt: node.mergedAt ?? null,
@@ -437,7 +441,8 @@ export async function collectRepoActivity(
   owner: string,
   repo: string,
   since: string,
-  until: string
+  until: string,
+  repoConfig?: RepoConfig
 ): Promise<RepoActivity> {
   console.log(`  Collecting ${owner}/${repo}...`);
 
@@ -530,10 +535,18 @@ export async function collectRepoActivity(
     "updatedAt"
   );
   const seenPRNumbers = new Set(createdPRs.map((pr) => pr.number));
-  const openedPRs = [
+  let openedPRs = [
     ...createdPRs,
     ...recentlyUpdatedPRs.filter((pr) => !seenPRNumbers.has(pr.number)),
   ];
+
+  // Apply per-repo open PR filters from config
+  if (repoConfig?.excludeDraftPRs) {
+    openedPRs = openedPRs.filter((pr) => !pr.isDraft);
+  }
+  if (repoConfig?.openPRBaseBranch) {
+    openedPRs = openedPRs.filter((pr) => pr.baseRefName === repoConfig.openPRBaseBranch);
+  }
 
   const openedIssues = filterByDateRange<Issue>(
     allOpenIssueNodes.map(mapIssue),
@@ -968,7 +981,7 @@ export async function collectWeeklyData(
   for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
     const batch = REPOS.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(
-      batch.map((r) => collectRepoActivity(gql, token, r.owner, r.name, since, until))
+      batch.map((r) => collectRepoActivity(gql, token, r.owner, r.name, since, until, r))
     );
     for (const result of results) {
       if (result.status === "fulfilled") {

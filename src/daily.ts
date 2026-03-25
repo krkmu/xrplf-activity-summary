@@ -70,7 +70,7 @@ async function main() {
     for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
       const batch = REPOS.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(
-        batch.map((r) => collectRepoActivity(gql, githubToken, r.owner, r.name, since, until))
+        batch.map((r) => collectRepoActivity(gql, githubToken, r.owner, r.name, since, until, r))
       );
       for (const result of results) {
         if (result.status === "fulfilled") {

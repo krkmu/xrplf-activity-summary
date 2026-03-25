@@ -163,17 +163,31 @@ npm start       # run compiled version
 
 ### Tracked repos
 
-Edit the `REPOS` array in `src/config.ts` (shared by both weekly and daily). Also update the matching `REPOS` list in `scripts/build-pages.js` for the PR chart:
+Edit `config.json` at the project root. This single file is used by both the TypeScript source and `scripts/build-pages.js`:
 
-```typescript
-const REPOS = [
-  "rippled",
-  "xrpl.js",
-  "xrpl-py",
-  // Add or remove repo names here (all under the XRPLF org)
-  "ripple/opensource.ripple.com", // cross-org: "owner/repo" format
-];
+```json
+{
+  "org": "XRPLF",
+  "concurrency": 2,
+  "repos": [
+    {
+      "name": "rippled",
+      "openPRBaseBranch": "develop",
+      "excludeDraftPRs": true
+    },
+    { "name": "xrpl.js" },
+    { "name": "ripple/opensource.ripple.com" }
+  ]
+}
 ```
+
+| Field | Scope | Description |
+|---|---|---|
+| `org` | Global | Default GitHub org for repos without an explicit owner |
+| `concurrency` | Global | Max parallel repo fetches (keep low to avoid GitHub 502s) |
+| `name` | Per-repo | Repo name, or `owner/repo` for cross-org repos |
+| `openPRBaseBranch` | Per-repo | Only include open PRs targeting this branch. Omit for all branches. |
+| `excludeDraftPRs` | Per-repo | Exclude draft PRs from the open PR list. Default: `false`. |
 
 Discussions are fetched for all repos automatically. If a repo doesn't have Discussions enabled, the query silently skips it.
 
@@ -251,8 +265,9 @@ Summaries are AI-generated. LLMs can hallucinate, misrepresent severity, or ampl
 ## Project Structure
 
 ```
+config.json               — Repo list, org, concurrency, per-repo PR filters
 src/
-  config.ts             — Shared configuration (tracked repos, org, concurrency)
+  config.ts             — Reads config.json, exports typed configuration
   types.ts              — Data interfaces (PR, Issue, Discussion, etc.)
   collector.ts          — GitHub API data collection (GraphQL + REST), amendment/XLS/blog fetching
   summarizer.ts         — Weekly prompt and Claude API call
