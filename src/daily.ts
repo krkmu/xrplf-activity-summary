@@ -119,24 +119,28 @@ async function main() {
   blogWindowStart.setUTCDate(blogWindowStart.getUTCDate() - 6);
   const blogPosts = await fetchBlogPosts(githubToken, blogWindowStart.toISOString().slice(0, 10), date);
 
-  // Load previous day's espresso for continuity
-  const prevDate = new Date(`${date}T00:00:00Z`);
-  prevDate.setUTCDate(prevDate.getUTCDate() - 1);
-  const prevDateStr = prevDate.toISOString().slice(0, 10);
-  const prevPath = join(outputDir, `${prevDateStr}.md`);
-  let previousEspresso: string | undefined;
-  if (existsSync(prevPath)) {
-    previousEspresso = readFileSync(prevPath, "utf-8");
-    console.log(`Loaded previous espresso (${prevDateStr}.md) for context`);
-  } else {
-    console.log(`No previous espresso found (${prevPath}) — skipping day-over-day context`);
+  // Load recent espressos (up to 3 days back) for continuity context
+  // This prevents re-mentioning items (e.g., blog posts, disclosures) already covered
+  const previousEspressos: string[] = [];
+  for (let daysBack = 1; daysBack <= 3; daysBack++) {
+    const prev = new Date(`${date}T00:00:00Z`);
+    prev.setUTCDate(prev.getUTCDate() - daysBack);
+    const prevStr = prev.toISOString().slice(0, 10);
+    const prevPath = join(outputDir, `${prevStr}.md`);
+    if (existsSync(prevPath)) {
+      previousEspressos.push(readFileSync(prevPath, "utf-8"));
+      console.log(`Loaded previous espresso (${prevStr}.md) for context`);
+    }
+  }
+  if (previousEspressos.length === 0) {
+    console.log(`No previous espressos found — skipping day-over-day context`);
   }
 
   const base = date;
   const inputPath = join(outputDir, `${base}_input.md`);
 
   if (promptOnly) {
-    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
+    const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspressos, advisories, blogPosts);
     writeFileSync(inputPath, `# System Prompt\n\n${systemPrompt}\n\n---\n\n# User Message\n\n${userMessage}`, "utf-8");
     console.log(`\nPrompt saved to ${inputPath}`);
     return;
@@ -147,7 +151,7 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
+  const result = await summarizeDaily(anthropicKey, repos, date, xlsSpecs, amendments, previousEspressos, advisories, blogPosts);
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;

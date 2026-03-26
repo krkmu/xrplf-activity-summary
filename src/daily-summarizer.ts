@@ -127,7 +127,8 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - Never put unpatched or unreleased security items in TL;DR or headings.
 - When in doubt, understate. A missed highlight is harmless; amplifying an unpatched vulnerability is dangerous.
 
-- If a "Previous Day's Espresso" is provided, use it for continuity: note items that were "Opened" yesterday and merged today, and flag any amendment status changes compared to yesterday's context. Do not repeat yesterday's content — only reference it when there is a meaningful update.
+- If "Recent Espressos" are provided, use them for continuity: note items that were "Opened" in a previous day and merged today, and flag any amendment status changes compared to previous context.
+- **Do NOT re-mention items already covered in a previous espresso.** This includes blog posts, vulnerability disclosures, releases, and any other news that was already reported. If a blog post or disclosure appeared in the data AND was already mentioned in a previous espresso, do not mention it again — the readers already know. Only reference previous content when there is a genuinely new update (e.g., a PR that was "Opened" yesterday and merged today).
 
 **Contributors:**
 - Only flag someone as a new contributor if their authorAssociation is exactly FIRST_TIME_CONTRIBUTOR. Never guess.
@@ -169,7 +170,7 @@ export function buildDailyPrompt(
   date: string,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  previousEspresso?: string,
+  previousEspressos: string[] = [],
   advisories: SecurityAdvisory[] = [],
   blogPosts: BlogPost[] = []
 ): { userMessage: string; systemPrompt: string } {
@@ -184,8 +185,8 @@ export function buildDailyPrompt(
   const amendmentContext = buildAmendmentContext(amendments);
   const blogContext = buildBlogContext(blogPosts);
 
-  const prevSection = previousEspresso
-    ? `## Previous Day's Espresso (for context)\n\n${previousEspresso}`
+  const prevSection = previousEspressos.length > 0
+    ? `## Recent Espressos (for context — do NOT repeat items already covered)\n\n${previousEspressos.join("\n\n---\n\n")}`
     : "";
 
   const fullData = repoSections.join("\n\n---\n\n") +
@@ -213,11 +214,11 @@ export async function summarizeDaily(
   date: string,
   xlsSpecs: XlsSpec[] = [],
   amendments: AmendmentStatus[] = [],
-  previousEspresso?: string,
+  previousEspressos: string[] = [],
   advisories: SecurityAdvisory[] = [],
   blogPosts: BlogPost[] = []
 ): Promise<DailySummarizeResult> {
-  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspresso, advisories, blogPosts);
+  const { userMessage, systemPrompt } = buildDailyPrompt(repos, date, xlsSpecs, amendments, previousEspressos, advisories, blogPosts);
 
   console.log(`\nSending to Claude for daily espresso (${userMessage.length} chars)...`);
 
