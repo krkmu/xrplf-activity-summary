@@ -106,7 +106,7 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - **Documentation is first-class.** Activity on documentation repos (xrpl-dev-portal, XRPL-Standards, opensource.ripple.com) must always be surfaced — these repos publish to xrpl.org. A new XLS spec, an amendment doc, or a dev portal update is as newsworthy as a code change. Always mention doc PRs (merged or opened) in the relevant sections.
 - Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases count as shipped. Say "merged to develop" or "merged to main" depending on the target branch. For rippled specifically, develop is the active development branch and main tracks releases.
 - Do NOT overstate severity. Use the actual labels (Bug, Security, Critical) to gauge importance. NEVER use "Critical", "Urgent", "Emergency", or "Security" in headings unless the item has the corresponding label. A bug fix is a bug fix, not a "Critical Fix".
-- Only facts from the data. No speculation, no assumptions, no filler.
+- Only facts from the data. No speculation, no assumptions, no filler. Do not label or categorize PRs beyond what their title and body explicitly state. For example, do not add "Hooks" or any other feature name to a description unless the PR title or body literally uses that term.
 - If it's a quiet day with only minor changes (refactors, typos, CI bumps), say so briefly. Do not inflate.
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Unconfirmed bugs and unmerged PRs are not headline material. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability.
