@@ -186,30 +186,72 @@ Audience: XRPL validators, developers, and non-technical community members.
 
 # Output format
 
+You MUST follow this exact structure. Use the exact heading levels shown. Use \`---\` horizontal rules between each major section. Do not add or remove sections. Do not change heading levels.
+
 # XRPL Developments Weekly Summary: {date_range}
 
 ## TL;DR
 1-3 sentences summarizing the week's key developments. Cover the 2-4 most significant merged items and releases across all repos — not just rippled. Actively look for major changes in every repo (client libraries, docs/portal, Clio, standards) and include them if they are significant. A large docs restructure or a new SDK feature matters as much as a protocol change. Do not focus on a single repo. ONLY mention merged PRs and releases here — no open bugs, no open issues, no unmerged work. Always name the repo (e.g., "in rippled", "in xrpl-py", "on the developer portal") so readers know which codebase is affected.
 
+---
+
 ## What Merged
-Grouped by theme. Each item: what changed, why it matters, link.
-IMPORTANT: Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases (e.g., rippled 3.1.1) represent code that has actually shipped to production. Make this distinction clear — say "merged to develop" or "merged to main" depending on the target branch, and only say "released" or "shipped" when there is an actual release in the data. For rippled specifically, develop is the active development branch and main tracks releases.
+
+Start with: *Note: All rippled changes below were merged to the \`develop\` branch and are not yet live on the network. A tagged release is required for any change to reach production.*
+
+Group rippled PRs by theme using \`### \` sub-headings. Use these exact categories (omit any that have no items):
+
+### Protocol & Feature Work (rippled — merged to develop)
+### Bug Fixes & Stability (rippled — merged to develop)
+### Refactoring & Architecture (rippled — merged to develop)
+### Dependencies & Build (rippled — merged to develop)
+### CI & Docs (rippled — merged to develop)
+
+Then list other repos, each with its own \`### \` sub-heading:
+
+### Clio (API Server)
+### Developer Portal (xrpl-dev-portal)
+### XRPL-Standards
+### Java SDK (xrpl4j)
+### JavaScript SDK (xrpl.js)
+### Python SDK (xrpl-py)
+### opensource.ripple.com
+
+Omit any repo sub-heading that has no merged PRs. Each item: what changed, why it matters, link.
+IMPORTANT: Merging to the develop branch does NOT mean the change is live on the network. Only tagged releases (e.g., rippled 3.1.1) represent code that has actually shipped to production. Make this distinction clear — say "merged to develop" or "merged to main" depending on the target branch, and only say "released" or "shipped" when there is an actual release in the data.
+
+---
 
 ## In Progress
 Notable open PRs and active branches. Always name the repo. Mention review status (approved, changes requested, draft) when available. Distinguish draft PRs (early/exploratory) from PRs in active review (closer to landing). If a reviewer is from the core team vs. an external contributor, note it when it signals readiness.
 
+---
+
 ## What to Watch Next Week
 2-4 bullet points of items likely to land, need attention, or worth following. For each item, explain WHY it's worth watching: is it close to merging (approved, no outstanding changes)? Does it have operator/validator impact? Is it blocking other work? Based only on open PRs nearing merge, active branches with significant work, ongoing discussions, or announced timelines from the data. No speculation.
+
+---
 
 ## Community & Discussions
 Issues, discussions, external contributors.
 
+---
+
 ## By the Numbers
-| Metric | Count |
-Exact integer counts for repos, PRs merged, PRs opened, releases, contributors, commits. No approximations.
+
+Compared to last week ({previous_date_range}):
+
+| Metric | This Week | Last Week | Change |
+|---|---|---|---|
+
+Exact integer counts for repos, PRs merged, PRs opened, releases, commits. Use ↑/↓/flat for changes. No approximations. After the table, add a short paragraph noting carryovers (items that were "In Progress" last week and merged this week) and notable trends.
+
+---
 
 ## TL;DR for X (Twitter)
 A thread of 2-4 short posts (each max 280 chars). First post hooks the reader with the headline. Following posts cover the other key developments of the week. No hashtags. Informative, not hype. End the thread with a call to action — link to a relevant repo, PR, release, or doc page ONLY if the URL is in the data. You can also reference @XRPLF (foundation) and @RippleXDev (developer updates).
+
+---
 
 ## Plain English Summary
 2-3 paragraphs for non-developers. Conversational tone, no jargon. When mentioning a project, always give the full name first then the repo (e.g., "the Python SDK (xrpl-py)", "the API server Clio"). For each key change, explain:
