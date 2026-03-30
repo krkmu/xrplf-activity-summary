@@ -521,7 +521,7 @@ export async function summarize(
     model,
     systemPrompt,
     userMessage,
-    10000
+    20000
   );
 
   return { summary, input: userMessage, systemPrompt, model, generatedAt: new Date().toISOString() };

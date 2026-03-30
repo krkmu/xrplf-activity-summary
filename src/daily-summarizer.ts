@@ -226,7 +226,7 @@ export async function summarizeDaily(
   const model = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6";
   console.log(`  Using model: ${model}`);
 
-  const summary = await callClaudeWithRetry(client, model, systemPrompt, userMessage, 4000);
+  const summary = await callClaudeWithRetry(client, model, systemPrompt, userMessage, 10000);
 
   return { summary, input: userMessage, systemPrompt, model, generatedAt: new Date().toISOString() };
 }
