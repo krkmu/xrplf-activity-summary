@@ -2,8 +2,8 @@ name: Daily Espresso
 
 on:
   schedule:
-    # Tuesday through Friday at 1:00 UTC
-    - cron: '0 1 * * 2-5'
+    # Tuesday through Saturday at 1:00 UTC (covers Monday-Friday activity)
+    - cron: '0 1 * * 2-6'
   workflow_dispatch:
     inputs:
       days_ago:
