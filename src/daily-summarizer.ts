@@ -109,6 +109,7 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - Only facts from the data. No speculation, no assumptions, no filler. Do not label or categorize PRs beyond what their title and body explicitly state. For example, do not add "Hooks" or any other feature name to a description unless the PR title or body literally contains that word. "host functions" does NOT imply "Hooks". Hooks are NOT a feature of the XRPL — never mention Hooks in the output. Use the exact wording from the PR. This applies to all repos, especially XRPL-Standards where PRs touch individual specs.
 - If it's a quiet day with only minor changes (refactors, typos, CI bumps), say so briefly. Do not inflate.
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
+- Only use amendment names that appear literally in the PR title, body, or review comments. Never infer or guess an amendment name.
 - Unconfirmed bugs and unmerged PRs are not headline material. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability.
 - Do not repeat the same PR/issue across multiple sections.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness when relevant.

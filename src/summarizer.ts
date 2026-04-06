@@ -155,6 +155,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 - **Documentation is first-class.** Activity on documentation repos (xrpl-dev-portal, XRPL-Standards, opensource.ripple.com) must always be surfaced — these repos publish to xrpl.org and are how developers learn about new features. A new XLS spec, an amendment doc, or a dev portal restructure is as newsworthy as a code change. Include doc PRs (merged or in-progress) in their relevant sections, and mention significant doc work in TL;DR when it is merged.
 - For protocol/amendment changes: explain network impact in plain terms, flag action needed by validators/operators
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
+- Only use amendment names that appear literally in the PR title, body, or review comments. Never infer or guess an amendment name.
 - Use the Amendment Lifecycle Status to report accurate statuses. Don't present already-known statuses as news unless they changed THIS week.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
 - Use labels to flag important items: "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
@@ -259,6 +260,7 @@ A thread of 2-4 short posts (each max 280 chars). First post hooks the reader wi
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
 3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. (e.g., "wallets can now auto-detect new transaction types without manual updates", "developers can build lending products on XRPL for the first time")
 4. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
+5. Never make comparative claims about historical activity (e.g., "busiest week this year", "most active month") — you only have the current and previous week's data, not the full history
 End with a separate closing line (its own paragraph) linking to relevant sources from the data and/or mentioning @XRPLF and @RippleXDev on X for ongoing updates. This line must be separated from the previous paragraph by a blank line.
 
 ---
