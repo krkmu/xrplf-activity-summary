@@ -196,7 +196,8 @@ export function buildDailyPrompt(
     (xlsContext ? `\n\n---\n\n${xlsContext}` : "") +
     (amendmentContext ? `\n\n---\n\n${amendmentContext}` : "");
 
-  const userMessage = `Here is the raw GitHub activity data for the XRPLF organization for ${date}. Please produce the daily espresso digest.\n\n${fullData}`;
+  const dayOfWeek = new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+  const userMessage = `Here is the raw GitHub activity data for the XRPLF organization for ${dayOfWeek}, ${date}. Please produce the daily espresso digest.\n\n${fullData}`;
 
   return { userMessage, systemPrompt: DAILY_SYSTEM_PROMPT };
 }
