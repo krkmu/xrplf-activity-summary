@@ -160,6 +160,11 @@ Audience: XRPL validators, developers, and non-technical community members.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness — e.g., "approved by 3 reviewers" or "has outstanding change requests"
 - Use labels to flag important items: "bug", "breaking change", "API Change" labels deserve prominent mention. Other labels can provide thematic context.
 
+**Release vs merge — for SDKs:**
+- Only use present-tense availability language ("developers can now…", "is now available", "ships support for…", "now supports…") when a tagged release of that SDK appears in the data AND that release contains the feature.
+- Otherwise use future/conditional phrasing: "lands in xrpl4j's main branch and will be available in the next release", "merged — pending release", "queued for the next xrpl.js release", "will be available to developers once xrpl-py publishes a release".
+- This applies to xrpl.js (npm), xrpl4j (Maven Central), and xrpl-py (PyPI). A merge to \`main\` is not a release — application developers cannot install the feature until a version tag is published.
+
 **Responsible Disclosure — CRITICAL:**
 - Security-related items (PRs/issues with labels containing "security" or "vulnerability", or titles/bodies mentioning CVEs, exploits, or vulnerabilities) require extreme caution.
 - If a security fix has been MERGED but there is NO corresponding tagged release in the data, do NOT highlight it. Mention it only as a routine merge with minimal detail (e.g., "a fix was merged to develop in rippled"). Do not describe the vulnerability, attack vector, or affected component.
@@ -200,6 +205,8 @@ You MUST follow this exact structure. Use the exact heading levels shown. Use \`
 
 Start with: *Note: All rippled changes below were merged to the \`develop\` branch and are not yet live on the network. A tagged release is required for any change to reach production.*
 
+Immediately after, add: *Note: SDK PRs below were merged to each library's main branch. They become available to application developers only after a tagged release is published (npm for xrpl.js, Maven Central for xrpl4j, PyPI for xrpl-py). If no corresponding SDK release appears in the data, treat the feature as merged-but-pending-release and phrase availability accordingly.*
+
 Group rippled PRs by theme using \`### \` sub-headings. Use these exact categories (omit any that have no items):
 
 ### Protocol & Feature Work (rippled — merged to develop)
@@ -213,9 +220,9 @@ Then list other repos, each with its own \`### \` sub-heading:
 ### Clio (API Server)
 ### Developer Portal (xrpl-dev-portal)
 ### XRPL-Standards
-### Java SDK (xrpl4j)
-### JavaScript SDK (xrpl.js)
-### Python SDK (xrpl-py)
+### Java SDK (xrpl4j — merged to main)
+### JavaScript SDK (xrpl.js — merged to main)
+### Python SDK (xrpl-py — merged to main)
 ### opensource.ripple.com
 
 Omit any repo sub-heading that has no merged PRs. Each item: what changed, why it matters, link.
@@ -258,7 +265,7 @@ A thread of 2-4 short posts (each max 280 chars). First post hooks the reader wi
 2-3 paragraphs for non-developers. Conversational tone, no jargon. When mentioning a project, always give the full name first then the repo (e.g., "the Python SDK (xrpl-py)", "the API server Clio"). For each key change, explain:
 1. What changed (translate technical terms)
 2. What it concretely means for users, validators, or the network (e.g., "Batch disabled means users cannot bundle transactions until a future release re-enables it", "memory optimization means nodes use less RAM over time, reducing hosting costs")
-3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. (e.g., "wallets can now auto-detect new transaction types without manual updates", "developers can build lending products on XRPL for the first time")
+3. For new features and releases: what new use cases or capabilities does this unlock? Only mention use cases that are directly and obviously enabled by the change — do not speculate or extrapolate. CRITICAL: only describe capabilities as currently available ("developers can now…") when a tagged release containing the feature appears in the data. For features merged to a develop or main branch without a corresponding release in the data, use future/conditional phrasing instead ("once xrpl4j publishes a release, Java developers will be able to build vault-aware applications", "the change lands in xrpl.js's main branch — application developers will get it in the next npm release"). Apply this to rippled (develop) and to all SDKs (main → npm/Maven/PyPI).
 4. Stay factual — only state implications that are directly derivable from the change itself, never speculate on timeline, intent, or future plans
 5. Never make comparative claims about historical activity (e.g., "busiest week this year", "most active month") — you only have the current and previous week's data, not the full history
 End with a separate closing line (its own paragraph) linking to relevant sources from the data and/or mentioning @XRPLF and @RippleXDev on X for ongoing updates. This line must be separated from the previous paragraph by a blank line.
