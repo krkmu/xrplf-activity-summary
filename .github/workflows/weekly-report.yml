@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -58,7 +60,13 @@ jobs:
           git rm --cached output/daily/*.md 2>/dev/null || true
           git reset output/*_input.md output/test*.md 2>/dev/null || true
           git diff --cached --quiet || git commit -m "Add weekly report $(date +%Y-%m-%d)"
-          git push
+          # Rebase onto the latest remote and push, retrying if main advanced
+          # (e.g. a concurrent push) so the report is never silently lost.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && break
+            echo "push attempt $attempt failed (remote advanced), retrying in 5s..."
+            sleep 5
+          done
 
       - name: Build HTML pages
         run: node scripts/build-pages.js
