@@ -123,6 +123,41 @@ test("validateReport fails loudly with the offending PRs and counts", async () =
   assert.deepEqual(result.countViolations, [{ repo: "rippled", claimed: 30, actual: 1 }]);
 });
 
+test("validateReport treats a count-only mismatch as a non-fatal warning (ok=true)", async () => {
+  const report = `## What Merged
+- [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)
+
+## By the Numbers
+| rippled PRs merged | 22 | 27 | flat |
+`;
+  const result = await validateReport(
+    report,
+    new Map([["rippled", 24]]),
+    async (refs) => new Map(refs.map((r) => [refKey(r), true]))
+  );
+  // Integrity is clean -> publishable, even though the count drifted.
+  assert.equal(result.ok, true);
+  assert.equal(result.unmergedClaims.length, 0);
+  assert.deepEqual(result.countViolations, [{ repo: "rippled", claimed: 22, actual: 24 }]);
+});
+
+test("validateReport stays fatal (ok=false) when an open PR is claimed merged", async () => {
+  // Counts are fine here; the only problem is the integrity violation.
+  const report = `## What Merged
+- [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)
+
+## By the Numbers
+| rippled PRs merged | 1 | 0 | ↑1 |
+`;
+  const result = await validateReport(
+    report,
+    new Map([["rippled", 1]]),
+    async () => new Map([["XRPLF/rippled#7350", false]])
+  );
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.unmergedClaims.map(refKey), ["XRPLF/rippled#7350"]);
+});
+
 test("validateReport passes a clean report", async () => {
   const clean = `## What Merged
 - [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)

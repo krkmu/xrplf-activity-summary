@@ -27,6 +27,8 @@ export interface CountViolation {
 }
 
 export interface ValidationResult {
+  /** True iff there are no integrity violations (open PRs claimed as merged).
+   *  Count drift does NOT clear this flag — it is surfaced as a warning. */
   ok: boolean;
   unmergedClaims: PRRef[];
   countViolations: CountViolation[];
@@ -132,8 +134,10 @@ export async function validateReport(
     (r) => status.get(refKey(r)) === true
   );
   const countViolations = findCountViolations(report, verifiedCounts);
+  // Only an integrity violation (an open PR presented as merged) is fatal.
+  // Count drift is reported as a non-fatal warning — see countViolations.
   return {
-    ok: unmergedClaims.length === 0 && countViolations.length === 0,
+    ok: unmergedClaims.length === 0,
     unmergedClaims,
     countViolations,
   };

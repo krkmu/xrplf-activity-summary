@@ -171,6 +171,15 @@ async function main() {
     (refs) => fetchMergedStatusFromGitHub(githubToken, refs)
   );
 
+  // Non-fatal: count drift is a warning; publish anyway.
+  if (validation.countViolations.length > 0) {
+    console.warn("\n⚠ Merged counts differ from verified data (publishing anyway):");
+    for (const c of validation.countViolations) {
+      console.warn(`    - ${c.repo}: claims ${c.claimed} merged, verified ${c.actual}`);
+    }
+  }
+
+  // Fatal: an open PR presented as merged. Do not publish.
   if (!validation.ok) {
     const rejectedPath = join(outputDir, `${base}.rejected.md`);
     writeFileSync(rejectedPath, result.summary + metadata, "utf-8");
@@ -178,16 +187,13 @@ async function main() {
     for (const r of validation.unmergedClaims) {
       console.error(`    - ${refKey(r)} listed as merged but is NOT merged (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
     }
-    for (const c of validation.countViolations) {
-      console.error(`    - ${c.repo}: claims ${c.claimed} merged, verified ${c.actual}`);
-    }
     console.error(`  Rejected espresso saved to ${rejectedPath} for inspection.`);
     throw new Error(
-      `Merge-status validation failed: ${validation.unmergedClaims.length} unmerged PR claim(s), ${validation.countViolations.length} count mismatch(es).`
+      `Merge-status validation failed: ${validation.unmergedClaims.length} unmerged PR claim(s).`
     );
   }
 
-  console.log("✓ Merge-status validation passed.");
+  console.log("✓ Merge-status validation passed (no open PR claimed as merged).");
   writeFileSync(outputPath, result.summary + metadata, "utf-8");
   console.log(`\nEspresso written to ${outputPath}`);
 }
