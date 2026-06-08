@@ -35,6 +35,8 @@ export interface PullRequest {
   author: string;
   authorAssociation: AuthorAssociation;
   mergedAt: string | null;
+  /** Single source of truth for merge status: true iff mergedAt != null. */
+  merged: boolean;
   createdAt: string;
   updatedAt: string;
   state: string;

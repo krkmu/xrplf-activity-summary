@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { WeeklyData, RepoActivity, PullRequest, Issue, Discussion } from "./types.js";
 import type { XlsSpec, AmendmentStatus, BlogPost, SecurityAdvisory } from "./collector.js";
+import { mergeStatusLabel } from "./merge-status.js";
 
 // Rough estimate: 1 token ≈ 4 chars for English text
 const CHARS_PER_TOKEN = 4;
@@ -32,7 +33,7 @@ function buildRepoSection(repo: RepoActivity): string {
         ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- [${mergeStatusLabel(pr)}] #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
       for (const review of pr.reviewContent) {
@@ -45,7 +46,7 @@ function buildRepoSection(repo: RepoActivity): string {
   }
 
   if (repo.openedPRs.length > 0) {
-    parts.push("\n### Opened PRs (in progress)");
+    parts.push("\n### Opened PRs (in progress — NOT merged)");
     for (const pr of repo.openedPRs) {
       const diff = `+${pr.diffStats.additions}/-${pr.diffStats.deletions} in ${pr.diffStats.changedFiles} files`;
       const reviewInfo = pr.reviews > 0 ? ` (${pr.reviews} reviews, ${pr.reviewComments} comments)` : "";
@@ -56,7 +57,7 @@ function buildRepoSection(repo: RepoActivity): string {
         ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${reviewInfo}${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- [${mergeStatusLabel(pr)}] #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${reviewInfo}${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
       for (const review of pr.reviewContent) {
@@ -202,6 +203,13 @@ You MUST follow this exact structure. Use the exact heading levels shown. Use \`
 ---
 
 ## What Merged
+
+**MERGE STATUS IS NOT YOUR JUDGMENT — it is given to you. CRITICAL:**
+- Every PR line in the data carries an explicit status tag: \`[STATUS: MERGED on YYYY-MM-DD]\` or \`[STATUS: OPEN — NOT MERGED]\`.
+- A PR may appear in "What Merged" IF AND ONLY IF its line carries \`STATUS: MERGED\`. PRs under "Opened PRs (in progress — NOT merged)" or carrying \`STATUS: OPEN — NOT MERGED\` are OPEN and MUST stay in "In Progress" / "What to Watch" — NEVER move them into any "What Merged" sub-heading.
+- NEVER infer merge status from anything else: an approving review (human OR an AI/bot reviewer such as xrplf-ai-reviewer), the "approved" decision, code completeness, line counts, number of files, recent commits, or the fact that a PR targets \`develop\`. An approval is NOT a merge.
+- The merged-PR counts you put in "By the Numbers" must equal the number of \`STATUS: MERGED\` PRs per repo in the data. Do not inflate them with open PRs.
+- Do NOT put a link to any OPEN PR anywhere in this section — not even as a cross-reference or a "fix in progress at #N" note. Every PR link inside "What Merged" is automatically verified against the GitHub API, and any open PR found here will cause the entire report to be rejected. Mention follow-ups and open work in "In Progress" instead.
 
 Start with: *Note: All rippled changes below were merged to the \`develop\` branch and are not yet live on the network. A tagged release is required for any change to reach production.*
 

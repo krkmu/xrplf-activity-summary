@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { RepoActivity } from "./types.js";
 import type { XlsSpec, AmendmentStatus, SecurityAdvisory, BlogPost } from "./collector.js";
 import { buildXlsContext, buildAmendmentContext, redactSecurityItems, buildBlogContext, callClaudeWithRetry } from "./summarizer.js";
+import { mergeStatusLabel } from "./merge-status.js";
 
 function buildRepoSection(repo: RepoActivity): string {
   const parts: string[] = [`## ${repo.repo}`];
@@ -25,21 +26,21 @@ function buildRepoSection(repo: RepoActivity): string {
         ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- [${mergeStatusLabel(pr)}] #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${linkedStr}${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
     }
   }
 
   if (repo.openedPRs.length > 0) {
-    parts.push("\n### Opened PRs");
+    parts.push("\n### Opened PRs (NOT merged)");
     for (const pr of repo.openedPRs) {
       const diff = `+${pr.diffStats.additions}/-${pr.diffStats.deletions} in ${pr.diffStats.changedFiles} files`;
       const reviewSummary = pr.reviewContent.length > 0
         ? ` Reviews: ${pr.reviewContent.map((r) => `${r.state} by @${r.author}`).join(", ")}`
         : "";
       parts.push(
-        `- #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
+        `- [${mergeStatusLabel(pr)}] #${pr.number}: ${pr.title} (by @${pr.author}, ${pr.authorAssociation}) ${pr.url} [${diff}]${reviewSummary} ${pr.labels.length ? `[${pr.labels.join(", ")}]` : ""}`
       );
       if (pr.body) parts.push(`  ${pr.body}`);
     }
@@ -152,6 +153,7 @@ End the TL;DR with a separate line: "Follow [@XRPLF](https://x.com/XRPLF) and [@
 
 ## What Merged
 Concise list. Each item: repo, what changed, link. No thematic grouping needed (too few items for a daily). If nothing merged, omit this section.
+**CRITICAL — merge status is given, not judged:** Include a PR here IF AND ONLY IF its data line carries \`[STATUS: MERGED]\`. PRs tagged \`[STATUS: OPEN — NOT MERGED]\` (under "Opened PRs (NOT merged)") are open — list them under "Opened", never here. An approving review (human OR an AI/bot reviewer like xrplf-ai-reviewer), the "approved" decision, code size, or targeting \`develop\` is NOT a merge.
 
 ## Opened
 Notable new PRs, issues, or discussions opened today. Include repo name and link. Skip trivial items (typo fixes, minor CI bumps). If nothing notable, omit this section.

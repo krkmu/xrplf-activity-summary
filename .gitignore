@@ -3,6 +3,8 @@ dist/
 .env
 output/*_input.md
 output/test*.md
+output/*.rejected.md
+output/daily/*.rejected.md
 output/daily/*_input.md
 .cache/
 site/

@@ -10,6 +10,7 @@ import {
   fetchBlogPosts,
 } from "./collector.js";
 import { summarizeDaily, buildDailyPrompt } from "./daily-summarizer.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey } from "./validator.js";
 import { graphql } from "@octokit/graphql";
 import type { RepoActivity } from "./types.js";
 import { REPOS, CONCURRENCY } from "./config.js";
@@ -155,8 +156,39 @@ async function main() {
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;
-  writeFileSync(outputPath, result.summary + metadata, "utf-8");
+
+  // Always save the prompt input for debugging, even if validation fails.
   writeFileSync(inputPath, `# System Prompt\n\n${result.systemPrompt}\n\n---\n\n# User Message\n\n${result.input}`, "utf-8");
+
+  // Validate merged claims against the live GitHub API before publishing.
+  console.log("\nValidating merge claims against the GitHub API...");
+  const verifiedCounts = new Map<string, number>(
+    repos.map((r) => [r.repo.toLowerCase(), r.mergedPRs.length])
+  );
+  const validation = await validateReport(
+    result.summary,
+    verifiedCounts,
+    (refs) => fetchMergedStatusFromGitHub(githubToken, refs)
+  );
+
+  if (!validation.ok) {
+    const rejectedPath = join(outputDir, `${base}.rejected.md`);
+    writeFileSync(rejectedPath, result.summary + metadata, "utf-8");
+    console.error("\n❌ Espresso FAILED merge-status validation — NOT publishing.");
+    for (const r of validation.unmergedClaims) {
+      console.error(`    - ${refKey(r)} listed as merged but is NOT merged (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
+    }
+    for (const c of validation.countViolations) {
+      console.error(`    - ${c.repo}: claims ${c.claimed} merged, verified ${c.actual}`);
+    }
+    console.error(`  Rejected espresso saved to ${rejectedPath} for inspection.`);
+    throw new Error(
+      `Merge-status validation failed: ${validation.unmergedClaims.length} unmerged PR claim(s), ${validation.countViolations.length} count mismatch(es).`
+    );
+  }
+
+  console.log("✓ Merge-status validation passed.");
+  writeFileSync(outputPath, result.summary + metadata, "utf-8");
   console.log(`\nEspresso written to ${outputPath}`);
 }
 

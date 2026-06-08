@@ -14,6 +14,7 @@ import type {
   WeeklyData,
 } from "./types.js";
 import { DEFAULT_ORG, REPOS, CONCURRENCY, type RepoConfig } from "./config.js";
+import { isMerged } from "./merge-status.js";
 
 function getWeekRange(weeksAgo = 0): { since: string; until: string } {
   const now = new Date();
@@ -274,7 +275,8 @@ function mapReviews(nodes: any[]): ReviewComment[] {
     }));
 }
 
-function mapPR(node: any): PullRequest {
+export function mapPR(node: any): PullRequest {
+  const mergedAt = node.mergedAt ?? null;
   return {
     title: node.title,
     number: node.number,
@@ -283,7 +285,8 @@ function mapPR(node: any): PullRequest {
     baseRefName: node.baseRefName ?? "",
     author: node.author?.login ?? "unknown",
     authorAssociation: node.authorAssociation ?? "NONE",
-    mergedAt: node.mergedAt ?? null,
+    mergedAt,
+    merged: isMerged({ mergedAt }),
     createdAt: node.createdAt,
     updatedAt: node.updatedAt ?? node.createdAt,
     state: node.state,
@@ -515,8 +518,10 @@ export async function collectRepoActivity(
     console.log(`    Discussions not available for ${repo}: ${err instanceof Error ? err.message : err}`);
   }
 
+  // Defensive: only genuinely-merged PRs (mergedAt != null) may enter mergedPRs,
+  // regardless of what the GraphQL state filter returned.
   const mergedPRs = filterByDateRange<PullRequest>(
-    allMergedPRNodes.map(mapPR),
+    allMergedPRNodes.map(mapPR).filter((pr) => pr.merged),
     since,
     until,
     "mergedAt"

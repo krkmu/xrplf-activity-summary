@@ -9,7 +9,8 @@
     "start": "node dist/main.js",
     "dev": "tsx src/main.ts",
     "daily": "tsx src/daily.ts",
-    "daily:build": "node dist/daily.js"
+    "daily:build": "node dist/daily.js",
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

@@ -14,6 +14,7 @@ import {
   fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarize, buildPrompt } from "./summarizer.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey } from "./validator.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
@@ -143,10 +144,49 @@ async function main() {
 
   const outputPath = join(outputDir, `${base}.md`);
   const metadata = `\n<!-- generated: ${result.generatedAt} | model: ${result.model} -->\n`;
-  writeFileSync(outputPath, result.summary + metadata, "utf-8");
+
+  // Always save the prompt input for debugging, even if validation fails.
   writeFileSync(inputPath, `# System Prompt\n\n${result.systemPrompt}\n\n---\n\n# User Message\n\n${result.input}`, "utf-8");
-  console.log(`\nSummary written to ${outputPath}`);
   console.log(`Input saved to ${inputPath}`);
+
+  // Validate every merged claim against the live GitHub API before publishing.
+  // Verified per-repo merged counts come straight from the collected data
+  // (mergedPRs only ever contains PRs with mergedAt != null).
+  console.log("\nValidating merge claims against the GitHub API...");
+  const verifiedCounts = new Map<string, number>(
+    data.repos.map((r) => [r.repo.toLowerCase(), r.mergedPRs.length])
+  );
+  const validation = await validateReport(
+    result.summary,
+    verifiedCounts,
+    (refs) => fetchMergedStatusFromGitHub(githubToken, refs)
+  );
+
+  if (!validation.ok) {
+    const rejectedPath = join(outputDir, `${base}.rejected.md`);
+    writeFileSync(rejectedPath, result.summary + metadata, "utf-8");
+    console.error("\n❌ Report FAILED merge-status validation — NOT publishing.");
+    if (validation.unmergedClaims.length > 0) {
+      console.error("  PRs listed under \"What Merged\" that are NOT merged per the GitHub API:");
+      for (const r of validation.unmergedClaims) {
+        console.error(`    - ${refKey(r)}  (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
+      }
+    }
+    if (validation.countViolations.length > 0) {
+      console.error("  \"By the Numbers\" merged counts that disagree with verified data:");
+      for (const c of validation.countViolations) {
+        console.error(`    - ${c.repo}: report claims ${c.claimed} merged, verified ${c.actual}`);
+      }
+    }
+    console.error(`  Rejected report saved to ${rejectedPath} for inspection.`);
+    throw new Error(
+      `Merge-status validation failed: ${validation.unmergedClaims.length} unmerged PR claim(s), ${validation.countViolations.length} count mismatch(es).`
+    );
+  }
+
+  console.log("✓ Merge-status validation passed.");
+  writeFileSync(outputPath, result.summary + metadata, "utf-8");
+  console.log(`\nSummary written to ${outputPath}`);
 }
 
 main().catch((err) => {
