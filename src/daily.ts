@@ -10,7 +10,7 @@ import {
   fetchBlogPosts,
 } from "./collector.js";
 import { summarizeDaily, buildDailyPrompt } from "./daily-summarizer.js";
-import { validateReport, fetchMergedStatusFromGitHub, refKey } from "./validator.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos } from "./validator.js";
 import { graphql } from "@octokit/graphql";
 import type { RepoActivity } from "./types.js";
 import { REPOS, CONCURRENCY } from "./config.js";
@@ -83,6 +83,13 @@ async function main() {
     }
 
     writeFileSync(cachePath, JSON.stringify(repos, null, 2), "utf-8");
+  }
+
+  // Surface incomplete collection: a repo absent from the collected set failed
+  // to collect (e.g. GitHub 502s) and would silently appear as "0 merged".
+  const missingRepos = findMissingRepos(REPOS.map((r) => r.name), repos.map((r) => r.repo));
+  if (missingRepos.length > 0) {
+    console.warn(`\n⚠ INCOMPLETE COLLECTION — these repos failed to collect and are MISSING from the espresso: ${missingRepos.join(", ")}`);
   }
 
   // Check if there's any activity

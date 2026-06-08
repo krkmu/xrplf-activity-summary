@@ -38,6 +38,16 @@ export function refKey(ref: PRRef): string {
   return `${ref.owner}/${ref.repo}#${ref.number}`;
 }
 
+/**
+ * Repos that were expected but are absent from the collected set — i.e. their
+ * collection failed (e.g. GitHub 502s exhausting retries). A missing repo means
+ * the report is INCOMPLETE: it would silently show "0 merged" for that repo.
+ */
+export function findMissingRepos(expected: string[], collected: string[]): string[] {
+  const have = new Set(collected);
+  return expected.filter((r) => !have.has(r));
+}
+
 /** Return the body of an H2 section (`## {heading}`) up to the next H2, or "". */
 export function extractSection(report: string, heading: string): string {
   const lines = report.split("\n");

@@ -14,7 +14,8 @@ import {
   fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarize, buildPrompt } from "./summarizer.js";
-import { validateReport, fetchMergedStatusFromGitHub, refKey } from "./validator.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos } from "./validator.js";
+import { REPOS } from "./config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(__dirname, "..");
@@ -75,6 +76,14 @@ async function main() {
   if (!data) {
     data = await collectWeeklyData(githubToken, weeksAgo);
     saveCachedData(cacheDir, data);
+  }
+
+  // Surface incomplete collection: a repo absent from data.repos failed to
+  // collect (e.g. GitHub 502s) and would silently appear as "0 merged".
+  const missingRepos = findMissingRepos(REPOS.map((r) => r.name), data.repos.map((r) => r.repo));
+  if (missingRepos.length > 0) {
+    console.warn(`\n⚠ INCOMPLETE COLLECTION — these repos failed to collect and are MISSING from the report: ${missingRepos.join(", ")}`);
+    console.warn(`  Their activity (merges, opens, releases) will be absent. Consider re-running before trusting this report.`);
   }
 
   // Load previous week's report for week-over-week comparison

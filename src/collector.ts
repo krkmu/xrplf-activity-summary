@@ -988,11 +988,13 @@ export async function collectWeeklyData(
     const results = await Promise.allSettled(
       batch.map((r) => collectRepoActivity(gql, token, r.owner, r.name, since, until, r))
     );
-    for (const result of results) {
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
       if (result.status === "fulfilled") {
         repos.push(result.value);
       } else {
-        console.error(`  Failed to collect repo:`, result.reason);
+        const { owner, name } = batch[j];
+        console.error(`  Failed to collect ${owner}/${name}:`, result.reason?.message ?? result.reason);
       }
     }
   }

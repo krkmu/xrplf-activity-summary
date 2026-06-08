@@ -7,6 +7,7 @@ import {
   extractMergedCountClaims,
   findCountViolations,
   validateReport,
+  findMissingRepos,
   refKey,
   type PRRef,
 } from "../src/validator.js";
@@ -156,6 +157,18 @@ test("validateReport stays fatal (ok=false) when an open PR is claimed merged", 
   );
   assert.equal(result.ok, false);
   assert.deepEqual(result.unmergedClaims.map(refKey), ["XRPLF/rippled#7350"]);
+});
+
+test("findMissingRepos returns expected repos absent from the collected set", () => {
+  // Models a CI run where rippled + xrpl.js failed to collect (GitHub 502s).
+  assert.deepEqual(
+    findMissingRepos(["rippled", "xrpl.js", "clio"], ["clio"]),
+    ["rippled", "xrpl.js"]
+  );
+});
+
+test("findMissingRepos returns [] when every expected repo was collected", () => {
+  assert.deepEqual(findMissingRepos(["rippled", "clio"], ["clio", "rippled"]), []);
 });
 
 test("validateReport passes a clean report", async () => {
