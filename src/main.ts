@@ -14,7 +14,7 @@ import {
   fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarize, buildPrompt } from "./summarizer.js";
-import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos } from "./validator.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos, findDroppedPRs, extractSection, extractPRReferences } from "./validator.js";
 import { REPOS } from "./config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -192,6 +192,19 @@ async function main() {
     throw new Error(
       `Merge-status validation failed: ${validation.unmergedClaims.length} unmerged PR claim(s).`
     );
+  }
+
+  // Reclassify-never-drop: warn if a PR from last week's "What Merged" is now
+  // not merged yet absent from this week's report — it should have been moved
+  // to "In Progress" / "What to Watch", not silently dropped.
+  if (data.previousReport) {
+    const prevMergedRefs = extractPRReferences(extractSection(data.previousReport, "What Merged"));
+    const prevStatus = await fetchMergedStatusFromGitHub(githubToken, prevMergedRefs);
+    const dropped = findDroppedPRs(data.previousReport, result.summary, (r) => prevStatus.get(refKey(r)) === true);
+    if (dropped.length > 0) {
+      console.warn("\n⚠ Dropped PRs — were in last week's \"What Merged\", are now NOT merged, and vanished from this report (reassign, don't drop):");
+      for (const r of dropped) console.warn(`    - ${refKey(r)} (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
+    }
   }
 
   console.log("✓ Merge-status validation passed (no open PR claimed as merged).");

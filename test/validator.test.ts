@@ -8,6 +8,7 @@ import {
   findCountViolations,
   validateReport,
   findMissingRepos,
+  findDroppedPRs,
   refKey,
   type PRRef,
 } from "../src/validator.js";
@@ -169,6 +170,49 @@ test("findMissingRepos returns expected repos absent from the collected set", ()
 
 test("findMissingRepos returns [] when every expected repo was collected", () => {
   assert.deepEqual(findMissingRepos(["rippled", "clio"], ["clio", "rippled"]), []);
+});
+
+// "Reclassify, never drop": a PR that was in the previous edition's "What
+// Merged" and is now not merged must be reassigned (In Progress / What to
+// Watch), not deleted. findDroppedPRs flags ones that vanished entirely.
+const PREV_WITH_MERGED = `## What Merged
+- [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)
+- [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)
+- [xrpl-dev-portal#3663](https://github.com/XRPLF/xrpl-dev-portal/pull/3663)
+`;
+
+test("findDroppedPRs flags a not-merged PR that vanished from the new report", () => {
+  const current = `## What Merged
+- [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)
+
+## In Progress
+- nothing relevant here
+`;
+  // 7346 merged; 7350 and 3663 not merged and absent -> both dropped.
+  const dropped = findDroppedPRs(PREV_WITH_MERGED, current, (r) => r.number === 7346);
+  assert.deepEqual(dropped.map(refKey).sort(), [
+    "XRPLF/rippled#7350",
+    "XRPLF/xrpl-dev-portal#3663",
+  ]);
+});
+
+// Regression fixture #3663 (open, ~27 commits, x402/agent wallets): once moved
+// to "In Progress" it is present, so it must NOT be reported as dropped.
+test("findDroppedPRs does not flag #3663 once it is reassigned to In Progress", () => {
+  const current = `## What Merged
+- [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)
+
+## In Progress
+- [xrpl-dev-portal#3663](https://github.com/XRPLF/xrpl-dev-portal/pull/3663) Agentic transactions — not merged
+- [rippled#7350](https://github.com/XRPLF/rippled/pull/7350) XLS-68 Sponsor — not merged
+`;
+  assert.deepEqual(findDroppedPRs(PREV_WITH_MERGED, current, (r) => r.number === 7346), []);
+});
+
+test("findDroppedPRs does not flag a previous item that genuinely merged later", () => {
+  const current = `## What to Watch\n- nothing\n`;
+  // Everything now merged -> absence is acceptable, nothing dropped.
+  assert.deepEqual(findDroppedPRs(PREV_WITH_MERGED, current, () => true), []);
 });
 
 test("validateReport passes a clean report", async () => {

@@ -152,6 +152,7 @@ Audience: XRPL validators, developers, and non-technical community members.
 
 **Content:**
 - Unconfirmed bugs, open issues, and unmerged PRs are never headline material — they belong in "What to Watch" or "Community".
+- **Merge status controls the SECTION an item appears in, never whether it appears at all (reclassify, never drop).** Excluding a not-merged PR from "What Merged" is correct; removing it from the report entirely is NOT. A notable not-merged PR — a new feature, a new docs section, an XLS implementation, a large diff, or an approved PR — MUST be moved to "In Progress" or "What to Watch", not deleted. If a PR was closed without merging, note it as closed; do not silently drop it. Treat "is it merged" and "should it appear at all" as two independent decisions.
 - Group by theme (protocol, performance, security, SDKs, docs, infra) — not by repo. Always name the repo in each item so the reader knows which codebase is affected.
 - **Documentation is first-class.** Activity on documentation repos (xrpl-dev-portal, XRPL-Standards, opensource.ripple.com) must always be surfaced — these repos publish to xrpl.org and are how developers learn about new features. A new XLS spec, an amendment doc, or a dev portal restructure is as newsworthy as a code change. Include doc PRs (merged or in-progress) in their relevant sections, and mention significant doc work in TL;DR when it is merged.
 - For protocol/amendment changes: explain network impact in plain terms, flag action needed by validators/operators

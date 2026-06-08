@@ -128,6 +128,26 @@ export function findCountViolations(
 }
 
 /**
+ * "Reclassify, never drop": PRs that were in the previous edition's "What
+ * Merged", are now NOT merged, and have vanished from the current report
+ * entirely. Merge status controls the section a PR appears in, never whether it
+ * appears at all — such PRs should have been reassigned to "In Progress" /
+ * "What to Watch" (or noted as closed), not deleted.
+ *
+ * `isMergedNow` returns true only when the PR is confirmed merged; a PR that
+ * merged since the previous edition may legitimately leave the report.
+ */
+export function findDroppedPRs(
+  previousReport: string,
+  currentReport: string,
+  isMergedNow: (ref: PRRef) => boolean
+): PRRef[] {
+  const previouslyMerged = extractPRReferences(extractSection(previousReport, "What Merged"));
+  const present = new Set(extractPRReferences(currentReport).map(refKey));
+  return previouslyMerged.filter((r) => !present.has(refKey(r)) && !isMergedNow(r));
+}
+
+/**
  * Validate a generated report. `fetchStatus` resolves PR refs to a map of
  * refKey -> merged(boolean); a missing key is treated as "not verified merged".
  */

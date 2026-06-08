@@ -112,6 +112,7 @@ Audience: XRPL validators, developers, and community members who want a quick da
 - Reference XLS spec numbers when mentioning amendments (e.g., "Batch (XLS-56)"). The XLS index is in the data.
 - Only use amendment names that appear literally in the PR title, body, or review comments. Never infer or guess an amendment name.
 - Unconfirmed bugs and unmerged PRs are not headline material. Preserve caveats and qualifiers from the original text. An unconfirmed bug is not a confirmed vulnerability.
+- **Merge status controls the SECTION, never visibility (reclassify, never drop).** A not-merged PR must not go in "What Merged", but a notable one (new feature, new docs section, XLS implementation, large diff, or approved PR) must still appear under "Opened" — never delete it.
 - Do not repeat the same PR/issue across multiple sections.
 - Use PR review states (APPROVED, CHANGES_REQUESTED) to contextualize readiness when relevant.
 - Do not mention Ripple or XRP unless directly relevant. No marketing or price talk.
