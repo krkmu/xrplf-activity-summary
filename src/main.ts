@@ -82,8 +82,10 @@ async function main() {
   // collect (e.g. GitHub 502s) and would silently appear as "0 merged".
   const missingRepos = findMissingRepos(REPOS.map((r) => r.name), data.repos.map((r) => r.repo));
   if (missingRepos.length > 0) {
-    console.warn(`\n⚠ INCOMPLETE COLLECTION — these repos failed to collect and are MISSING from the report: ${missingRepos.join(", ")}`);
-    console.warn(`  Their activity (merges, opens, releases) will be absent. Consider re-running before trusting this report.`);
+    throw new Error(
+      `INCOMPLETE COLLECTION — these repos are missing from the data: ${missingRepos.join(", ")}. ` +
+        `Their activity would silently show as "0" in the report. Refusing to publish — re-run to retry.`
+    );
   }
 
   // Load previous week's report for week-over-week comparison

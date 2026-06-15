@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mapPR } from "../src/collector.js";
+import { mapPR, buildMergedSearchQ } from "../src/collector.js";
 
 const baseNode = {
   title: "X",
@@ -22,6 +22,13 @@ test("mapPR sets merged=false when mergedAt is null", () => {
 test("mapPR sets merged=true only when mergedAt is present", () => {
   const pr = mapPR({ ...baseNode, mergedAt: "2026-06-04T20:25:52Z", state: "MERGED" });
   assert.equal(pr.merged, true);
+});
+
+// Merged PRs are fetched by merge date via Search (no deep UPDATED_AT
+// pagination), which is correct for any week and avoids the rippled 502s.
+test("buildMergedSearchQ targets merged PRs in the window by merge date", () => {
+  const q = buildMergedSearchQ("XRPLF", "rippled", "2026-06-08T00:00:00.000Z", "2026-06-14T23:59:59.999Z");
+  assert.equal(q, "repo:XRPLF/rippled is:pr is:merged merged:2026-06-08..2026-06-14");
 });
 
 // Regression #7350: open PR targeting develop, approved by the AI reviewer bot.

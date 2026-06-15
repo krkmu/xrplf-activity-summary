@@ -114,23 +114,12 @@ const ISSUE_FIELDS = `
   body
 `;
 
-function buildRepoQuery(prCursor: string | null, issueCursor: string | null): string {
-  const mergedAfter = prCursor ? `, after: "${prCursor}"` : "";
+function buildRepoQuery(issueCursor: string | null): string {
   const issueAfter = issueCursor ? `, after: "${issueCursor}"` : "";
 
   return `
 query($org: String!, $repo: String!, $since: GitTimestamp!, $until: GitTimestamp!) {
   repository(owner: $org, name: $repo) {
-    mergedPRs: pullRequests(
-      first: 30
-      states: MERGED
-      orderBy: { field: UPDATED_AT, direction: DESC }
-      ${mergedAfter}
-    ) {
-      pageInfo { hasNextPage endCursor }
-      nodes { ${PR_FIELDS} }
-    }
-
     openedPRs: pullRequests(
       first: 30
       states: OPEN
@@ -191,6 +180,29 @@ query($org: String!, $repo: String!, $since: GitTimestamp!, $until: GitTimestamp
 }
 `;
 }
+
+/**
+ * Search query string for PRs merged within the week window, by MERGE DATE.
+ *
+ * The repository `pullRequests` connection can only be ordered by CREATED_AT or
+ * UPDATED_AT, never by merge date. Paginating it to find a past week's merges
+ * meant walking deep into a large repo's UPDATED_AT-ordered history — many heavy
+ * page queries that triggered GraphQL 502 "Resource limits" on rippled and could
+ * drop the repo entirely. The Search API returns exactly the window's merged PRs
+ * directly, with no deep pagination, and is correct for any week.
+ */
+export function buildMergedSearchQ(owner: string, repo: string, since: string, until: string): string {
+  return `repo:${owner}/${repo} is:pr is:merged merged:${since.slice(0, 10)}..${until.slice(0, 10)}`;
+}
+
+const MERGED_SEARCH_QUERY = `
+query($q: String!, $cursor: String) {
+  search(query: $q, type: ISSUE, first: 50, after: $cursor) {
+    pageInfo { hasNextPage endCursor }
+    nodes { ... on PullRequest { ${PR_FIELDS} } }
+  }
+}
+`;
 
 const DISCUSSIONS_QUERY = `
 query($org: String!, $repo: String!) {
@@ -418,7 +430,7 @@ async function fetchActiveBranches(
   );
 }
 
-async function retryGql<T>(fn: () => Promise<T>, label: string, maxRetries = 3): Promise<T> {
+async function retryGql<T>(fn: () => Promise<T>, label: string, maxRetries = 5): Promise<T> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
@@ -449,43 +461,33 @@ export async function collectRepoActivity(
 ): Promise<RepoActivity> {
   console.log(`  Collecting ${owner}/${repo}...`);
 
-  // First page
+  // First page (open PRs, issues, releases, commits — NOT merged PRs)
   let data: any = await retryGql(
-    () => gql(buildRepoQuery(null, null), { org: owner, repo, since, until }),
+    () => gql(buildRepoQuery(null), { org: owner, repo, since, until }),
     `${repo} main query`
   );
 
   let r = data.repository;
-  let allMergedPRNodes = [...(r.mergedPRs?.nodes ?? [])];
   let allOpenIssueNodes = [...(r.openIssues?.nodes ?? [])];
 
-  // Paginate merged PRs if needed (keep fetching while items fall in date range)
-  let mergedPageInfo = r.mergedPRs?.pageInfo;
-  let paginationRounds = 0;
-  let stoppedByDate = false;
-  while (mergedPageInfo?.hasNextPage && paginationRounds < 10) {
-    const lastNode = allMergedPRNodes[allMergedPRNodes.length - 1];
-    const lastDate = lastNode?.mergedAt;
-    if (lastDate && lastDate < since) { stoppedByDate = true; break; }
-
-    console.log(`    Paginating merged PRs (page ${paginationRounds + 2})...`);
-    const nextData: any = await retryGql(
-      () => gql(buildRepoQuery(mergedPageInfo.endCursor, null), { org: owner, repo, since, until }),
-      `${repo} merged PRs page ${paginationRounds + 2}`
+  // Merged PRs are fetched by MERGE DATE via the Search API (see buildMergedSearchQ).
+  const mergedSearchNodes: any[] = [];
+  let mergedCursor: string | null = null;
+  let mergedRounds = 0;
+  do {
+    const sData: any = await retryGql(
+      () => gql(MERGED_SEARCH_QUERY, { q: buildMergedSearchQ(owner, repo, since, until), cursor: mergedCursor }),
+      `${repo} merged search${mergedCursor ? " (next page)" : ""}`
     );
-    const nextNodes = nextData.repository.mergedPRs?.nodes ?? [];
-    allMergedPRNodes.push(...nextNodes);
-    mergedPageInfo = nextData.repository.mergedPRs?.pageInfo;
-    paginationRounds++;
-  }
-
-  if (mergedPageInfo?.hasNextPage && !stoppedByDate) {
-    console.log(`    ⚠ More merged PRs available but pagination limit reached`);
-  }
+    const s = sData.search;
+    mergedSearchNodes.push(...(s?.nodes ?? []).filter((n: any) => n && n.number));
+    mergedCursor = s?.pageInfo?.hasNextPage ? s.pageInfo.endCursor : null;
+    mergedRounds++;
+  } while (mergedCursor && mergedRounds < 20);
 
   // Paginate open issues if needed
   let issuePageInfo = r.openIssues?.pageInfo;
-  paginationRounds = 0;
+  let paginationRounds = 0;
   while (issuePageInfo?.hasNextPage && paginationRounds < 2) {
     const lastNode = allOpenIssueNodes[allOpenIssueNodes.length - 1];
     const lastDate = lastNode?.createdAt;
@@ -493,7 +495,7 @@ export async function collectRepoActivity(
 
     console.log(`    Paginating open issues (page ${paginationRounds + 2})...`);
     const nextData: any = await retryGql(
-      () => gql(buildRepoQuery(null, issuePageInfo.endCursor), { org: owner, repo, since, until }),
+      () => gql(buildRepoQuery(issuePageInfo.endCursor), { org: owner, repo, since, until }),
       `${repo} open issues page ${paginationRounds + 2}`
     );
     const nextNodes = nextData.repository.openIssues?.nodes ?? [];
@@ -518,10 +520,11 @@ export async function collectRepoActivity(
     console.log(`    Discussions not available for ${repo}: ${err instanceof Error ? err.message : err}`);
   }
 
-  // Defensive: only genuinely-merged PRs (mergedAt != null) may enter mergedPRs,
-  // regardless of what the GraphQL state filter returned.
+  // Defensive: only genuinely-merged PRs (mergedAt != null) may enter mergedPRs.
+  // Search already constrains by merge date; filterByDateRange re-checks the
+  // exact UTC window boundaries.
   const mergedPRs = filterByDateRange<PullRequest>(
-    allMergedPRNodes.map(mapPR).filter((pr) => pr.merged),
+    mergedSearchNodes.map(mapPR).filter((pr) => pr.merged),
     since,
     until,
     "mergedAt"
@@ -983,6 +986,7 @@ export async function collectWeeklyData(
 
   // Collect repos in parallel, limited to stay within GitHub GraphQL node limits
   const repos: RepoActivity[] = [];
+  const failed: string[] = [];
   for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
     const batch = REPOS.slice(i, i + CONCURRENCY);
     const results = await Promise.allSettled(
@@ -995,8 +999,18 @@ export async function collectWeeklyData(
       } else {
         const { owner, name } = batch[j];
         console.error(`  Failed to collect ${owner}/${name}:`, result.reason?.message ?? result.reason);
+        failed.push(`${owner}/${name}`);
       }
     }
+  }
+
+  // Fail closed: never produce an incomplete dataset. A dropped repo would
+  // silently appear as "0 merged / 0 activity" in the report, which is worse
+  // than failing and re-running.
+  if (failed.length > 0) {
+    throw new Error(
+      `Collection failed for ${failed.length} repo(s): ${failed.join(", ")}. Refusing to produce an incomplete report — re-run to retry.`
+    );
   }
 
   return {

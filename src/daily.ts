@@ -68,28 +68,41 @@ async function main() {
     });
 
     repos = [];
+    const failed: string[] = [];
     for (let i = 0; i < REPOS.length; i += CONCURRENCY) {
       const batch = REPOS.slice(i, i + CONCURRENCY);
       const results = await Promise.allSettled(
         batch.map((r) => collectRepoActivity(gql, githubToken, r.owner, r.name, since, until, r))
       );
-      for (const result of results) {
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
         if (result.status === "fulfilled") {
           repos.push(result.value);
         } else {
-          console.error(`  Failed to collect repo:`, result.reason);
+          const { owner, name } = batch[j];
+          console.error(`  Failed to collect ${owner}/${name}:`, (result.reason as any)?.message ?? result.reason);
+          failed.push(`${owner}/${name}`);
         }
       }
+    }
+
+    // Fail closed: don't cache or publish an incomplete dataset.
+    if (failed.length > 0) {
+      throw new Error(
+        `Collection failed for ${failed.length} repo(s): ${failed.join(", ")}. Refusing to produce an incomplete espresso — re-run to retry.`
+      );
     }
 
     writeFileSync(cachePath, JSON.stringify(repos, null, 2), "utf-8");
   }
 
-  // Surface incomplete collection: a repo absent from the collected set failed
-  // to collect (e.g. GitHub 502s) and would silently appear as "0 merged".
+  // Fail closed on incomplete collection (also catches a stale partial cache):
+  // a missing repo would silently appear as "0 merged / 0 activity".
   const missingRepos = findMissingRepos(REPOS.map((r) => r.name), repos.map((r) => r.repo));
   if (missingRepos.length > 0) {
-    console.warn(`\n⚠ INCOMPLETE COLLECTION — these repos failed to collect and are MISSING from the espresso: ${missingRepos.join(", ")}`);
+    throw new Error(
+      `INCOMPLETE COLLECTION — these repos are missing from the data: ${missingRepos.join(", ")}. Refusing to publish — re-run to retry.`
+    );
   }
 
   // Check if there's any activity
