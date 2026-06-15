@@ -14,7 +14,7 @@ import {
   fetchSecurityAdvisories,
 } from "./collector.js";
 import { summarize, buildPrompt } from "./summarizer.js";
-import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos, findDroppedPRs, extractSection, extractPRReferences } from "./validator.js";
+import { validateReport, fetchMergedStatusFromGitHub, refKey, findMissingRepos, findDroppedPRs, extractSection, extractPRReferences, reconcileMergedCounts } from "./validator.js";
 import { REPOS } from "./config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -167,8 +167,17 @@ async function main() {
   const verifiedCounts = new Map<string, number>(
     data.repos.map((r) => [r.repo.toLowerCase(), r.mergedPRs.length])
   );
+
+  // Auto-correct the "By the Numbers" merged counts to the verified values
+  // (the model recurrently under-counts). Deterministic, never fails.
+  const { report: finalSummary, corrections } = reconcileMergedCounts(result.summary, verifiedCounts);
+  if (corrections.length > 0) {
+    console.log("Auto-corrected \"By the Numbers\" merged counts to verified values:");
+    for (const c of corrections) console.log(`    - ${c.repo}: ${c.from} → ${c.to}`);
+  }
+
   const validation = await validateReport(
-    result.summary,
+    finalSummary,
     verifiedCounts,
     (refs) => fetchMergedStatusFromGitHub(githubToken, refs)
   );
@@ -192,7 +201,7 @@ async function main() {
   // Fatal: an open PR presented as merged. Do not publish.
   if (!validation.ok) {
     const rejectedPath = join(outputDir, `${base}.rejected.md`);
-    writeFileSync(rejectedPath, result.summary + metadata, "utf-8");
+    writeFileSync(rejectedPath, finalSummary + metadata, "utf-8");
     console.error("\n❌ Report FAILED merge-status validation — NOT publishing.");
     console.error("  PRs listed under \"What Merged\" that are NOT merged per the GitHub API:");
     for (const r of validation.unmergedClaims) {
@@ -210,7 +219,7 @@ async function main() {
   if (data.previousReport) {
     const prevMergedRefs = extractPRReferences(extractSection(data.previousReport, "What Merged"));
     const prevStatus = await fetchMergedStatusFromGitHub(githubToken, prevMergedRefs);
-    const dropped = findDroppedPRs(data.previousReport, result.summary, (r) => prevStatus.get(refKey(r)) === true);
+    const dropped = findDroppedPRs(data.previousReport, finalSummary, (r) => prevStatus.get(refKey(r)) === true);
     if (dropped.length > 0) {
       console.warn("\n⚠ Dropped PRs — were in last week's \"What Merged\", are now NOT merged, and vanished from this report (reassign, don't drop):");
       for (const r of dropped) console.warn(`    - ${refKey(r)} (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
@@ -218,7 +227,7 @@ async function main() {
   }
 
   console.log("✓ Merge-status validation passed (no open PR claimed as merged).");
-  writeFileSync(outputPath, result.summary + metadata, "utf-8");
+  writeFileSync(outputPath, finalSummary + metadata, "utf-8");
   console.log(`\nSummary written to ${outputPath}`);
 }
 

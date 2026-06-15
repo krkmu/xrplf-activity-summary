@@ -148,6 +148,43 @@ export function extractMergedCountClaims(report: string): Map<string, number> {
 }
 
 /**
+ * Rewrite "<repo> PRs merged" rows in the "By the Numbers" table so the
+ * This-Week cell equals the verified count, recomputing the ↑/↓/flat change vs
+ * the Last-Week cell. The model recurrently under-counts; the verified count is
+ * a deterministic fact we own, so we set it rather than asking the model to
+ * reproduce it. Pure text transform — never throws; malformed rows are skipped.
+ */
+export function reconcileMergedCounts(
+  report: string,
+  verifiedCounts: Map<string, number>
+): { report: string; corrections: { repo: string; from: number; to: number }[] } {
+  const corrections: { repo: string; from: number; to: number }[] = [];
+  const lines = report.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.includes("PRs merged") || !line.trimStart().startsWith("|")) continue;
+    const cells = line.split("|"); // ["", " label ", " thisWeek ", " lastWeek ", " change ", ""]
+    if (cells.length < 6) continue;
+    const labelMatch = cells[1].match(/^\s*(.+?)\s+PRs merged\s*$/);
+    if (!labelMatch) continue;
+    const repo = labelMatch[1].trim().toLowerCase();
+    const verified = verifiedCounts.get(repo);
+    if (verified === undefined) continue;
+    const claimed = parseInt(cells[2].trim(), 10);
+    if (Number.isNaN(claimed) || claimed === verified) continue;
+    cells[2] = ` ${verified} `;
+    const lastWeek = parseInt(cells[3].trim(), 10);
+    if (!Number.isNaN(lastWeek)) {
+      const diff = verified - lastWeek;
+      cells[4] = ` ${diff > 0 ? "↑" + diff : diff < 0 ? "↓" + Math.abs(diff) : "flat"} `;
+    }
+    lines[i] = cells.join("|");
+    corrections.push({ repo, from: claimed, to: verified });
+  }
+  return { report: lines.join("\n"), corrections };
+}
+
+/**
  * Compare claimed "PRs merged" counts against verified counts. Repos without a
  * verified count are skipped (the PR-level check still guards their claims).
  */

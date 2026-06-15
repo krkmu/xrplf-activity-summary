@@ -261,7 +261,7 @@ Compared to last week ({previous_date_range}):
 | Metric | This Week | Last Week | Change |
 |---|---|---|---|
 
-Exact integer counts for repos, PRs merged, PRs opened, releases, commits. Use ↑/↓/flat for changes. No approximations. After the table, add a short paragraph noting carryovers (items that were "In Progress" last week and merged this week) and notable trends.
+Exact integer counts for repos, PRs merged, PRs opened, releases, commits. Use ↑/↓/flat for changes. No approximations. **Take every "This Week" integer from the "Verified Counts" block — those are authoritative. Use the same numbers in the TL;DR, prose, and Twitter thread. Never count the bullets yourself (grouped items make you under-count).** After the table, add a short paragraph noting carryovers (items that were "In Progress" last week and merged this week) and notable trends.
 
 ---
 
@@ -405,6 +405,34 @@ export function redactSecurityItems(repos: RepoActivity[], sources: DisclosureSo
   });
 }
 
+/**
+ * Authoritative per-repo counts for "By the Numbers". The model otherwise counts
+ * bullets and under-reports (e.g. wrote "rippled 23 merged" when 26 merged).
+ * These come straight from collection and must be used verbatim — in the table
+ * AND in any prose/TL;DR/Twitter mention of a count.
+ */
+export function buildVerifiedCountsContext(repos: RepoActivity[]): string {
+  const active = repos.filter(
+    (r) =>
+      r.mergedPRs.length + r.openedPRs.length + r.openedIssues.length +
+        r.closedIssues.length + r.discussions.length + r.releases.length +
+        r.commits.totalCount + r.activeBranches.length >
+      0
+  );
+  if (active.length === 0) return "";
+  const lines = [
+    "## Verified Counts (AUTHORITATIVE — use these EXACT integers)",
+    "These are the true per-repo counts for this week. Use them verbatim for the \"This Week\" column of \"By the Numbers\" AND for any count you state in prose, the TL;DR, or the Twitter thread. NEVER recount from the activity lists above — those may be grouped or summarized, so counting them under-reports.",
+    "",
+  ];
+  for (const r of active) {
+    lines.push(
+      `- ${r.repo}: ${r.mergedPRs.length} PRs merged, ${r.openedPRs.length} PRs opened, ${r.openedIssues.length} new issues, ${r.closedIssues.length} closed issues, ${r.releases.length} releases, ${r.commits.totalCount} commits`
+    );
+  }
+  return lines.join("\n");
+}
+
 export function buildAmendmentContext(amendments: AmendmentStatus[]): string {
   if (amendments.length === 0) return "";
 
@@ -505,7 +533,11 @@ export function buildPrompt(
     ? `## Daily Espressos This Week (for context and continuity)\nThese daily digests were published earlier this week. Use them for continuity — avoid contradicting what was already published, and build on their narrative where relevant.\n\n${dailyEspressos.join("\n\n---\n\n")}`
     : "";
 
+  // Authoritative counts (computed from raw data, not the model's tally).
+  const verifiedCountsContext = buildVerifiedCountsContext(data.repos);
+
   const fullData = repoSections.join("\n\n---\n\n") +
+    (verifiedCountsContext ? `\n\n---\n\n${verifiedCountsContext}` : "") +
     (prevReportSection ? `\n\n---\n\n${prevReportSection}` : "") +
     (dailyContext ? `\n\n---\n\n${dailyContext}` : "") +
     (blogContext ? `\n\n---\n\n${blogContext}` : "") +

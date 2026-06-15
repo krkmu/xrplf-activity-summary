@@ -10,6 +10,7 @@ import {
   findMissingRepos,
   findDroppedPRs,
   classifyMergedSection,
+  reconcileMergedCounts,
   refKey,
   type PRRef,
 } from "../src/validator.js";
@@ -253,6 +254,43 @@ test("findDroppedPRs does not flag a previous item that genuinely merged later",
   const current = `## What to Watch\n- nothing\n`;
   // Everything now merged -> absence is acceptable, nothing dropped.
   assert.deepEqual(findDroppedPRs(PREV_WITH_MERGED, current, () => true), []);
+});
+
+// Auto-correct "By the Numbers" merged counts to the verified value (the model
+// recurrently under-counts). Pure text transform — must never throw.
+const NUMBERS = `## By the Numbers
+| Metric | This Week | Last Week | Change |
+|---|---|---|---|
+| rippled PRs merged | 23 | 22 | ↑1 |
+| Clio PRs merged | 7 | 10 | ↓3 |
+`;
+
+test("reconcileMergedCounts rewrites the merged cell to verified and recomputes the change", () => {
+  const { report, corrections } = reconcileMergedCounts(NUMBERS, new Map([["rippled", 26], ["clio", 7]]));
+  assert.match(report, /\| rippled PRs merged \| 26 \| 22 \| ↑4 \|/);
+  assert.match(report, /\| Clio PRs merged \| 7 \| 10 \| ↓3 \|/); // already correct, untouched
+  assert.deepEqual(corrections, [{ repo: "rippled", from: 23, to: 26 }]);
+});
+
+test("reconcileMergedCounts produces 'flat' when verified equals last week", () => {
+  const { report } = reconcileMergedCounts(
+    `| rippled PRs merged | 20 | 22 | ↓2 |\n`,
+    new Map([["rippled", 22]])
+  );
+  assert.match(report, /\| rippled PRs merged \| 22 \| 22 \| flat \|/);
+});
+
+test("reconcileMergedCounts leaves rows untouched when no verified count is known", () => {
+  const report = `| xrpl4j PRs merged | 1 | 1 | flat |\n`;
+  const { report: out, corrections } = reconcileMergedCounts(report, new Map());
+  assert.equal(out, report);
+  assert.equal(corrections.length, 0);
+});
+
+test("reconcileMergedCounts ignores malformed rows without throwing", () => {
+  const report = `| rippled PRs merged | abc | 22 | ↑1 |\n`;
+  const { report: out } = reconcileMergedCounts(report, new Map([["rippled", 26]]));
+  assert.equal(out, report); // non-numeric claim -> skipped
 });
 
 test("validateReport passes a clean report", async () => {
