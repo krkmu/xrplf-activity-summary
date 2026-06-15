@@ -32,6 +32,9 @@ export interface ValidationResult {
   ok: boolean;
   unmergedClaims: PRRef[];
   countViolations: CountViolation[];
+  /** Open PRs mentioned in "What Merged" only as cross-references (e.g. "fix in
+   *  progress at #N"). Non-fatal, surfaced for visibility. */
+  crossReferences: PRRef[];
 }
 
 export function refKey(ref: PRRef): string {
@@ -82,17 +85,49 @@ export function extractPRReferences(text: string): PRRef[] {
   return refs;
 }
 
+// Phrases that mark a nearby PR reference as NOT-merged context — i.e. a merged
+// bullet pointing at an open follow-up ("a fix is in progress at #7404"), not a
+// claim that the referenced PR itself merged.
+const NOT_MERGED_CONTEXT =
+  /(in progress|pending|follow[\s-]?up|not (yet )?merged|unmerged|still open|open pr|awaiting|tracked (in|by)|will (merge|land|be merged)|to be merged|fix (is )?(in progress|coming|pending)|once .{0,30}?merges?|draft pr|\(draft)/i;
+
 /**
- * Return every PR referenced in the "What Merged" section that is NOT verified
- * as merged. `isVerifiedMerged` must return true ONLY when merged is confirmed;
- * anything else (false / unknown) is a violation.
+ * PRs in a "What Merged" section that are presented AS merged items. A PR
+ * reference immediately preceded by not-merged context (a cross-reference to an
+ * open follow-up) is excluded — it is not a merged claim. This keeps the
+ * #7350-style bug (an open PR presented as merged) caught while not blocking on
+ * legitimate "fix in progress at #N" mentions inside a merged bullet.
+ */
+export function extractMergedClaims(text: string): PRRef[] {
+  const seen = new Set<string>();
+  const claims: PRRef[] = [];
+  let m: RegExpExecArray | null;
+  PR_URL.lastIndex = 0;
+  while ((m = PR_URL.exec(text)) !== null) {
+    const ref: PRRef = { owner: m[1], repo: m[2], number: parseInt(m[3], 10) };
+    const before = text.slice(Math.max(0, m.index - 70), m.index);
+    if (NOT_MERGED_CONTEXT.test(before)) continue; // cross-reference, not a claim
+    const k = refKey(ref);
+    if (!seen.has(k)) {
+      seen.add(k);
+      claims.push(ref);
+    }
+  }
+  return claims;
+}
+
+/**
+ * Return every PR claimed as merged in the "What Merged" section that is NOT
+ * verified as merged. `isVerifiedMerged` must return true ONLY when merged is
+ * confirmed; anything else (false / unknown) is a violation. Cross-references
+ * to open follow-ups are not claims and are not flagged here.
  */
 export function findUnmergedClaims(
   report: string,
   isVerifiedMerged: (ref: PRRef) => boolean
 ): PRRef[] {
   const section = extractSection(report, "What Merged");
-  return extractPRReferences(section).filter((r) => !isVerifiedMerged(r));
+  return extractMergedClaims(section).filter((r) => !isVerifiedMerged(r));
 }
 
 const MERGED_COUNT_ROW = /\|\s*([A-Za-z0-9_.\-/ ]+?)\s+PRs merged\s*\|\s*(\d+)\s*\|/g;
@@ -159,17 +194,18 @@ export async function validateReport(
   const section = extractSection(report, "What Merged");
   const refs = extractPRReferences(section);
   const status = await fetchStatus(refs);
-  const unmergedClaims = findUnmergedClaims(
-    report,
-    (r) => status.get(refKey(r)) === true
-  );
+  const isMergedNow = (r: PRRef) => status.get(refKey(r)) === true;
+  const unmergedClaims = findUnmergedClaims(report, isMergedNow);
+  const claimKeys = new Set(extractMergedClaims(section).map(refKey));
+  const crossReferences = refs.filter((r) => !claimKeys.has(refKey(r)) && !isMergedNow(r));
   const countViolations = findCountViolations(report, verifiedCounts);
   // Only an integrity violation (an open PR presented as merged) is fatal.
-  // Count drift is reported as a non-fatal warning — see countViolations.
+  // Count drift and cross-references are reported as non-fatal warnings.
   return {
     ok: unmergedClaims.length === 0,
     unmergedClaims,
     countViolations,
+    crossReferences,
   };
 }
 

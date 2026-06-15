@@ -178,6 +178,14 @@ async function main() {
     (refs) => fetchMergedStatusFromGitHub(githubToken, refs)
   );
 
+  // Non-fatal: open PRs cross-referenced inside "What Merged".
+  if (validation.crossReferences.length > 0) {
+    console.warn("\n⚠ Open PRs cross-referenced inside \"What Merged\" (mentions, not merge claims):");
+    for (const r of validation.crossReferences) {
+      console.warn(`    - ${refKey(r)} (https://github.com/${r.owner}/${r.repo}/pull/${r.number})`);
+    }
+  }
+
   // Non-fatal: count drift is a warning; publish anyway.
   if (validation.countViolations.length > 0) {
     console.warn("\n⚠ Merged counts differ from verified data (publishing anyway):");

@@ -9,6 +9,7 @@ import {
   validateReport,
   findMissingRepos,
   findDroppedPRs,
+  extractMergedClaims,
   refKey,
   type PRRef,
 } from "../src/validator.js";
@@ -69,6 +70,43 @@ test("extractPRReferences parses owner/repo/number from PR URLs and dedupes", ()
 test("extractPRReferences ignores issue URLs (only /pull/)", () => {
   const refs = extractPRReferences("[i](https://github.com/XRPLF/rippled/issues/7395)");
   assert.equal(refs.length, 0);
+});
+
+// A merged bullet may legitimately reference an OPEN follow-up PR ("a fix is in
+// progress at #7404"). That reference must NOT be treated as a merged claim.
+const CROSSREF_SECTION = `- **Disable transaction invariants**: Temporarily disabled; a proper fix is in progress at [rippled#7404](https://github.com/XRPLF/rippled/pull/7404). Approved by @ximinez. [rippled#7409](https://github.com/XRPLF/rippled/pull/7409)
+- **Add fee vote maxes** [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)`;
+
+test("extractMergedClaims excludes open PRs that are only cross-referenced", () => {
+  const claims = extractMergedClaims(CROSSREF_SECTION);
+  assert.deepEqual(claims.map(refKey).sort(), [
+    "XRPLF/rippled#7346",
+    "XRPLF/rippled#7409",
+  ]);
+});
+
+test("extractMergedClaims keeps a PR presented as the merged item", () => {
+  const section = `- **Sponsor (XLS-68)**: Full implementation of sponsorship [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)`;
+  assert.deepEqual(extractMergedClaims(section).map(refKey), ["XRPLF/rippled#7350"]);
+});
+
+test("findUnmergedClaims ignores a cross-referenced open follow-up (#7404)", () => {
+  const report = `## What Merged\n${CROSSREF_SECTION}\n\n## In Progress\n- [rippled#7404](https://github.com/XRPLF/rippled/pull/7404) follow-up\n`;
+  // 7409 + 7346 merged; 7404 open but only cross-referenced -> no violation.
+  const merged = new Map<string, boolean>([
+    ["XRPLF/rippled#7409", true],
+    ["XRPLF/rippled#7346", true],
+    ["XRPLF/rippled#7404", false],
+  ]);
+  const v = findUnmergedClaims(report, (r) => merged.get(refKey(r)) === true);
+  assert.deepEqual(v, []);
+});
+
+test("findUnmergedClaims still flags an open PR genuinely presented as merged", () => {
+  const report = `## What Merged
+- **Sponsor (XLS-68)**: Full implementation [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)
+`;
+  assert.deepEqual(findUnmergedClaims(report, () => false).map(refKey), ["XRPLF/rippled#7350"]);
 });
 
 test("findUnmergedClaims flags PRs in What Merged that are not verified-merged", () => {
