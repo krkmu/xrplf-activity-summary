@@ -9,7 +9,7 @@ import {
   validateReport,
   findMissingRepos,
   findDroppedPRs,
-  extractMergedClaims,
+  classifyMergedSection,
   refKey,
   type PRRef,
 } from "../src/validator.js";
@@ -77,17 +77,19 @@ test("extractPRReferences ignores issue URLs (only /pull/)", () => {
 const CROSSREF_SECTION = `- **Disable transaction invariants**: Temporarily disabled; a proper fix is in progress at [rippled#7404](https://github.com/XRPLF/rippled/pull/7404). Approved by @ximinez. [rippled#7409](https://github.com/XRPLF/rippled/pull/7409)
 - **Add fee vote maxes** [rippled#7346](https://github.com/XRPLF/rippled/pull/7346)`;
 
-test("extractMergedClaims excludes open PRs that are only cross-referenced", () => {
-  const claims = extractMergedClaims(CROSSREF_SECTION);
-  assert.deepEqual(claims.map(refKey).sort(), [
-    "XRPLF/rippled#7346",
-    "XRPLF/rippled#7409",
-  ]);
+test("classifyMergedSection treats an open PR sharing a line with a merged PR as a cross-reference", () => {
+  const report = `## What Merged\n${CROSSREF_SECTION}\n`;
+  const isMerged = (r: PRRef) => r.number === 7409 || r.number === 7346; // 7404 is open
+  const { unmergedClaims, crossReferences } = classifyMergedSection(report, isMerged);
+  assert.deepEqual(unmergedClaims, []);
+  assert.deepEqual(crossReferences.map(refKey), ["XRPLF/rippled#7404"]);
 });
 
-test("extractMergedClaims keeps a PR presented as the merged item", () => {
-  const section = `- **Sponsor (XLS-68)**: Full implementation of sponsorship [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)`;
-  assert.deepEqual(extractMergedClaims(section).map(refKey), ["XRPLF/rippled#7350"]);
+test("classifyMergedSection flags an open PR alone on its line as a false merge claim", () => {
+  const report = `## What Merged\n- **Sponsor (XLS-68)**: Full implementation [rippled#7350](https://github.com/XRPLF/rippled/pull/7350)\n`;
+  const { unmergedClaims, crossReferences } = classifyMergedSection(report, () => false);
+  assert.deepEqual(unmergedClaims.map(refKey), ["XRPLF/rippled#7350"]);
+  assert.deepEqual(crossReferences, []);
 });
 
 test("findUnmergedClaims ignores a cross-referenced open follow-up (#7404)", () => {
